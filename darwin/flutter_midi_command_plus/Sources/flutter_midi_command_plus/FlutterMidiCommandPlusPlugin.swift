@@ -1223,7 +1223,6 @@ class ConnectedVirtualOrNativeDevice: ConnectedDevice {
 
     override func send(bytes: [UInt8], timestamp: UInt64?, portId: UInt64?) {
         print("send \(bytes.count) bytes to \(String(describing: name))")
-
         if let ep = outEndpoint {
             splitDataIntoMIDIPackets(bytes: bytes, timestamp: timestamp) {
                 packetListPointer in
