@@ -300,7 +300,7 @@ public class FlutterMidiCommandPlusPlugin: NSObject, CBCentralManagerDelegate,
             break
         case "getDevices":
             let devices = getDevices()
-            print("--- devices ---\n\(devices)")
+            //print("--- devices ---\n\(devices)")
             result(devices)
             break
         case "connectToDevice":

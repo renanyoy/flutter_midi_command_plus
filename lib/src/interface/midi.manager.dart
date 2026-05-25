@@ -60,11 +60,11 @@ class MidiManager {
   }
 
   Future<void> updateDevices() async {
-    final odevices = [...devices];
-    final devscan = await mc.devices ?? [];
+    final odevices = {...devices};
+    final devscan = {...(await mc.devices ?? [])};
     // add added
     for (final device in devscan) {
-      if (devices.firstWhereOrNull((d) => d.id == device.id) == null) {
+      if (!devices.contains(device)) {
         if (!device.connected) {
           try {
             await mc.connectToDevice(device);
@@ -78,10 +78,10 @@ class MidiManager {
     }
     // remove removed
     devices.removeWhere(
-      (device) => devices.firstWhereOrNull((d) => d.id == device.id) == null,
+      (device) => !devscan.contains(device)
     );
     devices.sortBy((d) => d.name);
-    if (!DeepCollectionEquality().equals(odevices, devices)) {
+    if (!DeepCollectionEquality().equals(odevices, {...devices})) {
       onDevicesChanged.fire(devices);
     }
   }
