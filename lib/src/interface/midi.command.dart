@@ -5,7 +5,8 @@ import '../platform.midi/flutter_midi_command_platform_interface.dart';
 import '../platform.midi/midi_device.dart';
 import '../platform.midi/midi_packet.dart';
 
-
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 enum BluetoothState {
   poweredOn,
   poweredOff,
@@ -16,6 +17,8 @@ enum BluetoothState {
   other,
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 class MidiCommand {
   factory MidiCommand() {
     _instance ??= MidiCommand._();
@@ -33,7 +36,8 @@ class MidiCommand {
 
   static MidiCommandPlatform? __platform;
 
-  final StreamController<Uint8List> _txStreamCtrl = StreamController.broadcast();
+  final StreamController<Uint8List> _txStreamCtrl =
+      StreamController.broadcast();
 
   final _bluetoothStateStream = StreamController<BluetoothState>.broadcast();
 
@@ -42,16 +46,18 @@ class MidiCommand {
   BluetoothState _bluetoothState = BluetoothState.unknown;
   StreamSubscription? _onBluetoothStateChangedStreamSubscription;
   Future<void> _listenToBluetoothState() async {
-    _onBluetoothStateChangedStreamSubscription =
-        _platform.onBluetoothStateChanged?.listen((s) {
-      _bluetoothState = BluetoothState.values.byName(s);
-      _bluetoothStateStream.add(_bluetoothState);
-    });
+    _onBluetoothStateChangedStreamSubscription = _platform
+        .onBluetoothStateChanged
+        ?.listen((s) {
+          _bluetoothState = BluetoothState.values.byName(s);
+          _bluetoothStateStream.add(_bluetoothState);
+        });
 
     scheduleMicrotask(() async {
       if (_bluetoothState == BluetoothState.unknown) {
-        _bluetoothState =
-            BluetoothState.values.byName(await _platform.bluetoothState());
+        _bluetoothState = BluetoothState.values.byName(
+          await _platform.bluetoothState(),
+        );
         _bluetoothStateStream.add(_bluetoothState);
       }
     });
@@ -93,13 +99,9 @@ class MidiCommand {
   /// Found devices will be included in the list returned by [devices]
   Future<void> waitUntilBluetoothIsInitialized() async {
     bool isInitialized() => _bluetoothState != BluetoothState.unknown;
-
-    print(_bluetoothState);
-
     if (isInitialized()) {
       return;
     }
-
     await for (final _ in onBluetoothStateChanged) {
       if (isInitialized()) {
         break;
@@ -138,8 +140,18 @@ class MidiCommand {
   /// Sends data to the currently connected device
   ///
   /// Data is an UInt8List of individual MIDI command bytes
-  void sendData(Uint8List data, {String? deviceId, int? portId, int? timestamp}) {
-    _platform.sendData(data, deviceId: deviceId, portId: portId, timestamp: timestamp);
+  void sendData(
+    Uint8List data, {
+    String? deviceId,
+    int? portId,
+    int? timestamp,
+  }) {
+    _platform.sendData(
+      data,
+      deviceId: deviceId,
+      portId: portId,
+      timestamp: timestamp,
+    );
     _txStreamCtrl.add(data);
   }
 
@@ -193,3 +205,5 @@ class MidiCommand {
     _platform.setNetworkSessionEnabled(enabled);
   }
 }
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////

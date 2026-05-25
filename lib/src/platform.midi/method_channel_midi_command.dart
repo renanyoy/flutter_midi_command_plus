@@ -5,26 +5,31 @@ import 'midi_device.dart';
 import 'midi_packet.dart';
 import 'midi_port.dart';
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 const MethodChannel _methodChannel = MethodChannel(
   'plugins.invisiblewrench.com/flutter_midi_command',
 );
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 const EventChannel _rxChannel = EventChannel(
   'plugins.invisiblewrench.com/flutter_midi_command/rx_channel',
 );
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 const EventChannel _setupChannel = EventChannel(
   'plugins.invisiblewrench.com/flutter_midi_command/setup_channel',
 );
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 const EventChannel _bluetoothStateChannel = EventChannel(
   'plugins.invisiblewrench.com/flutter_midi_command/bluetooth_central_state',
 );
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// An implementation of [MidiCommandPlatform] that uses method channels.
 class MethodChannelMidiCommand extends MidiCommandPlatform {
   Stream<MidiPacket>? _rxStream;
   Stream<String>? _setupStream;
   Stream<String>? _bluetoothStateStream;
-
-  /// Returns a list of found MIDI devices.
   @override
   Future<List<MidiDevice>?> get devices async {
     var devs = await _methodChannel.invokeMethod('getDevices');
@@ -55,9 +60,6 @@ class MethodChannelMidiCommand extends MidiCommandPlatform {
     return ports.toList(growable: false);
   }
 
-  /// Starts bluetooth subsystem.
-  ///
-  /// Shows an alert requesting access rights for bluetooth.
   @override
   Future<void> startBluetoothCentral() async {
     try {
@@ -67,7 +69,6 @@ class MethodChannelMidiCommand extends MidiCommandPlatform {
     }
   }
 
-  /// Stream firing events whenever a change in bluetooth central state happens
   @override
   Stream<String>? get onBluetoothStateChanged {
     _bluetoothStateStream ??= _bluetoothStateChannel
@@ -76,7 +77,6 @@ class MethodChannelMidiCommand extends MidiCommandPlatform {
     return _bluetoothStateStream;
   }
 
-  /// Returns the current state of the bluetooth subsystem
   @override
   Future<String> bluetoothState() async {
     try {
@@ -86,9 +86,6 @@ class MethodChannelMidiCommand extends MidiCommandPlatform {
     }
   }
 
-  /// Starts scanning for BLE MIDI devices.
-  ///
-  /// Found devices will be included in the list returned by [devices].
   @override
   Future<void> startScanningForBluetoothDevices() async {
     try {
@@ -98,13 +95,11 @@ class MethodChannelMidiCommand extends MidiCommandPlatform {
     }
   }
 
-  /// Stops scanning for BLE MIDI devices.
   @override
   void stopScanningForBluetoothDevices() {
     _methodChannel.invokeMethod('stopScanForDevices');
   }
 
-  /// Connects to the device.
   @override
   Future<void> connectToDevice(MidiDevice device, {List<MidiPort>? ports}) {
     return _methodChannel.invokeMethod('connectToDevice', {
@@ -113,21 +108,16 @@ class MethodChannelMidiCommand extends MidiCommandPlatform {
     });
   }
 
-  /// Disconnects from the device.
   @override
   void disconnectDevice(MidiDevice device) {
     _methodChannel.invokeMethod('disconnectDevice', device.toDictionary);
   }
 
-  /// Disconnects from all devices.
   @override
   void teardown() {
     _methodChannel.invokeMethod('teardown');
   }
 
-  /// Sends data to the currently connected device.
-  ///
-  /// Data is an UInt8List of individual MIDI command bytes.
   @override
   void sendData(
     Uint8List data, {
@@ -135,7 +125,6 @@ class MethodChannelMidiCommand extends MidiCommandPlatform {
     String? deviceId,
     int? portId,
   }) {
-    // print("send $data through method channel");
     _methodChannel.invokeMethod('sendData', {
       "data": data,
       "timestamp": timestamp,
@@ -144,9 +133,6 @@ class MethodChannelMidiCommand extends MidiCommandPlatform {
     });
   }
 
-  /// Stream firing events whenever a midi package is received.
-  ///
-  /// The event contains the raw bytes contained in the MIDI package.
   @override
   Stream<MidiPacket>? get onMidiDataReceived {
     // print("get on midi data");
@@ -161,42 +147,31 @@ class MethodChannelMidiCommand extends MidiCommandPlatform {
     return _rxStream;
   }
 
-  /// Stream firing events whenever a change in the MIDI setup occurs.
-  ///
-  /// For example, when a new BLE devices is discovered.
   @override
   Stream<String>? get onMidiSetupChanged {
     _setupStream ??= _setupChannel.receiveBroadcastStream().cast<String>();
     return _setupStream;
   }
 
-  /// Creates a virtual MIDI source
-  ///
-  /// The virtual MIDI source appears as a virtual port in other apps.
-  /// Currently only supported on iOS.
-  /// TODO: https://developer.apple.com/documentation/MIDIDriverKit/creating-a-midi-device-driver
   @override
   void addVirtualDevice({String? name}) {
     _methodChannel.invokeMethod('addVirtualDevice', {"name": name});
   }
 
-  /// Removes a previously addd virtual MIDI source.
   @override
   void removeVirtualDevice({String? name}) {
     _methodChannel.invokeMethod('removeVirtualDevice', {"name": name});
   }
 
-  /// Returns the current state of the network session
-  ///
-  /// This is functional on iOS only, will return null on other platforms
+  @override
   Future<bool?> get isNetworkSessionEnabled {
     return _methodChannel.invokeMethod('isNetworkSessionEnabled');
   }
 
-  /// Sets the enabled state of the network session
-  ///
-  /// This is functional on iOS only
+  @override
   void setNetworkSessionEnabled(bool enabled) {
     _methodChannel.invokeMethod('enableNetworkSession', enabled);
   }
 }
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////

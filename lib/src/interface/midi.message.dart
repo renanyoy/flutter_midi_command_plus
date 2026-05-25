@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+/*
 enum MessageType {
   cc,
   pc,
@@ -13,23 +14,21 @@ enum MessageType {
   at,
   pitchBend,
 }
-
+*/
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 class MidiMessage {
-  /// Byte data of the message
   Uint8List get data => Uint8List(0);
-
-  /// Base class for MIDI message types
   MidiMessage();
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 class CCMessage extends MidiMessage {
   int channel;
   int controller;
   int value;
-
-  /// Continuous Control Message
   CCMessage({this.channel = 0, this.controller = 0, this.value = 0});
-
   @override
   Uint8List get data {
     final data = Uint8List(3);
@@ -40,13 +39,11 @@ class CCMessage extends MidiMessage {
   }
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 class PCMessage extends MidiMessage {
   int channel;
   int program;
-
-  /// Program Change Message
   PCMessage({this.channel = 0, this.program = 0});
-
   @override
   Uint8List get data {
     final data = Uint8List(2);
@@ -56,14 +53,12 @@ class PCMessage extends MidiMessage {
   }
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 class NoteOnMessage extends MidiMessage {
   int channel;
   int note;
   int velocity;
-
-  /// Note On Message
   NoteOnMessage({this.channel = 0, this.note = 0, this.velocity = 0});
-
   @override
   Uint8List get data {
     final data = Uint8List(3);
@@ -74,14 +69,12 @@ class NoteOnMessage extends MidiMessage {
   }
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 class NoteOffMessage extends MidiMessage {
   int channel;
   int note;
   int velocity;
-
-  /// Note Off Message
   NoteOffMessage({this.channel = 0, this.note = 0, this.velocity = 0});
-
   @override
   Uint8List get data {
     final data = Uint8List(3);
@@ -92,13 +85,11 @@ class NoteOffMessage extends MidiMessage {
   }
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 class SysExMessage extends MidiMessage {
   List<int> headerData;
   int value;
-
-  /// System Exclusive Message
   SysExMessage({this.headerData = const [], this.value = 0});
-
   @override
   Uint8List get data {
     final data = Uint8List.fromList(headerData);
@@ -110,15 +101,12 @@ class SysExMessage extends MidiMessage {
 
   Int8List _bytesForValue(int value) {
     var bytes = Int8List(5);
-
     int absValue = value.abs();
-
     int base256 = (absValue ~/ 256);
     int left = absValue - (base256 * 256);
     int base1 = left % 128;
     left -= base1;
     int base2 = left ~/ 2;
-
     if (value < 0) {
       bytes[0] = 0x7F;
       bytes[1] = 0x7F;
@@ -134,14 +122,12 @@ class SysExMessage extends MidiMessage {
   }
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 class NRPN4Message extends MidiMessage {
   int channel;
   int parameter;
   int value;
-
-  /// NRPN Message with Value MSB and LSB bytes
   NRPN4Message({this.channel = 0, this.parameter = 0, this.value = 0});
-
   @override
   Uint8List get data {
     parameter = parameter.clamp(0, 16383);
@@ -174,14 +160,12 @@ class NRPN4Message extends MidiMessage {
   }
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 class NRPN3Message extends MidiMessage {
   int channel;
   int parameter;
   int value;
-
-  /// NRPN Message with single value byte
   NRPN3Message({this.channel = 0, this.parameter = 0, this.value = 0});
-
   @override
   Uint8List get data {
     parameter = parameter.clamp(0, 16383);
@@ -208,14 +192,13 @@ class NRPN3Message extends MidiMessage {
   }
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 class NRPNHexMessage extends MidiMessage {
   int channel;
   int parameterMSB;
   int parameterLSB;
   int valueMSB;
   int valueLSB;
-
-  /// NRPN Message with data separated in MSB, LSB
   NRPNHexMessage({
     this.channel = 0,
     this.parameterMSB = 0,
@@ -223,7 +206,6 @@ class NRPNHexMessage extends MidiMessage {
     this.valueMSB = 0,
     this.valueLSB = -1,
   });
-
   @override
   Uint8List get data {
     final data = Uint8List(9);
@@ -248,13 +230,10 @@ class NRPNHexMessage extends MidiMessage {
   }
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 class NRPNNullMessage extends MidiMessage {
   int channel;
-
-  /// It is best practice, but not mandatory, to send a Null Message at the end of a NRPN
-  /// Stream to prevent accidental value changes on CC6 after a message has concluded.
   NRPNNullMessage({this.channel = 0});
-
   @override
   Uint8List get data {
     final data = Uint8List(6);
@@ -272,6 +251,7 @@ class NRPNNullMessage extends MidiMessage {
   }
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 class RPNMessage extends MidiMessage {
   int channel;
   int parameter;
@@ -289,7 +269,6 @@ class RPNMessage extends MidiMessage {
   ///
   /// Value Range is Hex: 0x0000 - 0x3FFFF or Decimal: 0-16383
   RPNMessage({this.channel = 0, this.parameter = 0, this.value = 0});
-
   @override
   Uint8List get data {
     final data = Uint8List(12);
@@ -317,14 +296,13 @@ class RPNMessage extends MidiMessage {
   }
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 class RPNHexMessage extends MidiMessage {
   int channel;
   int parameterMSB;
   int parameterLSB;
   int valueMSB;
   int valueLSB;
-
-  /// RPN Message with data separated in MSB, LSB
   RPNHexMessage({
     this.channel = 0,
     this.parameterMSB = 0,
@@ -363,6 +341,7 @@ class RPNHexMessage extends MidiMessage {
   }
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 class RPNNullMessage extends MidiMessage {
   int channel;
 
@@ -387,6 +366,7 @@ class RPNNullMessage extends MidiMessage {
   }
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 class PitchBendMessage extends MidiMessage {
   int channel;
   double bend;
@@ -410,6 +390,7 @@ class PitchBendMessage extends MidiMessage {
   }
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 class PolyATMessage extends MidiMessage {
   int channel;
   int note;
@@ -444,6 +425,7 @@ class ATMessage extends MidiMessage {
   }
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 class SenseMessage extends MidiMessage {
   /// Sense Message
 
@@ -455,8 +437,10 @@ class SenseMessage extends MidiMessage {
   }
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 enum ClockType { beat, start, cont, stop }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 class ClockMessage extends MidiMessage {
   ClockType type;
 
@@ -483,3 +467,5 @@ class ClockMessage extends MidiMessage {
     return data;
   }
 }
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
