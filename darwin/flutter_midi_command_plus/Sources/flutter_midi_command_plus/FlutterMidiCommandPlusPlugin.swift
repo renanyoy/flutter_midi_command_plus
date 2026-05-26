@@ -22,20 +22,6 @@ import os.log
 /// https://github.com/InvisibleWrench/FlutterMidiCommand
 ////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////
-func isVirtualEndpoint(endpoint: MIDIEndpointRef) -> Bool {
-    var entity: MIDIEntityRef = 0
-    MIDIEndpointGetEntity(endpoint, &entity)
-    let result = entity == 0
-    return result
-}
-
-func displayName(endpoint: MIDIEndpointRef) -> String {
-    return FlutterMidiCommandPlusPlugin.getMIDIProperty(
-        kMIDIPropertyDisplayName,
-        fromObject: endpoint
-    )
-}
-
 func appName() -> String {
     return Bundle.main.infoDictionary?[kCFBundleNameKey as String] as! String
 }
@@ -80,21 +66,22 @@ public class FlutterMidiCommandPlusPlugin: NSObject, CBCentralManagerDelegate,
         category: "MIDI"
     )
 
+    // virtuam
+
+    var ownVirtualDevices = Set<ConnectedOwnVirtualDevice>()
+
     public static func register(with registrar: FlutterPluginRegistrar) {
         #if os(macOS)
-            let channel = FlutterMethodChannel(
-                name: "plugins.invisiblewrench.com/flutter_midi_command",
-                binaryMessenger: registrar.messenger
-            )
+            var messenger = registrar.messenger
         #else
-            let channel = FlutterMethodChannel(
-                name: "plugins.invisiblewrench.com/flutter_midi_command",
-                binaryMessenger: registrar.messenger()
-            )
+            var messenger = registrar.messenger()
         #endif
+        let channel = FlutterMethodChannel(
+            name: "plugins.invisiblewrench.com/flutter_midi_command",
+            binaryMessenger: messenger
+        )
         let instance = FlutterMidiCommandPlusPlugin()
         registrar.addMethodCallDelegate(instance, channel: channel)
-
         instance.setup(registrar)
     }
 
@@ -106,43 +93,28 @@ public class FlutterMidiCommandPlusPlugin: NSObject, CBCentralManagerDelegate,
     func setup(_ registrar: FlutterPluginRegistrar) {
         // Stream setup
         #if os(macOS)
-            midiRXChannel = FlutterEventChannel(
-                name:
-                    "plugins.invisiblewrench.com/flutter_midi_command/rx_channel",
-                binaryMessenger: registrar.messenger
-            )
+            var messenger = registrar.messenger
         #else
-            midiRXChannel = FlutterEventChannel(
-                name:
-                    "plugins.invisiblewrench.com/flutter_midi_command/rx_channel",
-                binaryMessenger: registrar.messenger()
-            )
+            var messenger = registrar.messenger()
         #endif
+
+        midiRXChannel = FlutterEventChannel(
+            name:
+                "plugins.invisiblewrench.com/flutter_midi_command/rx_channel",
+            binaryMessenger: messenger
+        )
         midiRXChannel?.setStreamHandler(rxStreamHandler)
 
-        #if os(macOS)
-            midiSetupChannel = FlutterEventChannel(
-                name:
-                    "plugins.invisiblewrench.com/flutter_midi_command/setup_channel",
-                binaryMessenger: registrar.messenger
-            )
-            bluetoothStateChannel = FlutterEventChannel(
-                name:
-                    "plugins.invisiblewrench.com/flutter_midi_command/bluetooth_central_state",
-                binaryMessenger: registrar.messenger
-            )
-        #else
-            midiSetupChannel = FlutterEventChannel(
-                name:
-                    "plugins.invisiblewrench.com/flutter_midi_command/setup_channel",
-                binaryMessenger: registrar.messenger()
-            )
-            bluetoothStateChannel = FlutterEventChannel(
-                name:
-                    "plugins.invisiblewrench.com/flutter_midi_command/bluetooth_central_state",
-                binaryMessenger: registrar.messenger()
-            )
-        #endif
+        midiSetupChannel = FlutterEventChannel(
+            name:
+                "plugins.invisiblewrench.com/flutter_midi_command/setup_channel",
+            binaryMessenger: messenger
+        )
+        bluetoothStateChannel = FlutterEventChannel(
+            name:
+                "plugins.invisiblewrench.com/flutter_midi_command/bluetooth_central_state",
+            binaryMessenger: messenger
+        )
         midiSetupChannel?.setStreamHandler(setupStreamHandler)
         bluetoothStateChannel?.setStreamHandler(bluetoothStateHandler)
 
@@ -182,10 +154,8 @@ public class FlutterMidiCommandPlusPlugin: NSObject, CBCentralManagerDelegate,
 
     // Create an own virtual device appearing in other apps.
     // Other apps can use that device to send and receive MIDI to and from this app.
-    var ownVirtualDevices = Set<ConnectedOwnVirtualDevice>()
 
-    func findOrCreateOwnVirtualDevice(name: String) -> ConnectedOwnVirtualDevice
-    {
+    func findOrCreateOwnVirtualDevice(name: String) -> ConnectedOwnVirtualDevice {
         let existingDevice = ownVirtualDevices.first(where: { device in
             device.name == name
         })
@@ -299,8 +269,7 @@ public class FlutterMidiCommandPlusPlugin: NSObject, CBCentralManagerDelegate,
             manager.stopScan()
             break
         case "getDevices":
-            let devices = getDevices()
-            //print("--- devices ---\n\(devices)")
+            let devices = Device.getDevices().map { $0.toDictionary() }
             result(devices)
             break
         case "connectToDevice":
@@ -319,8 +288,7 @@ public class FlutterMidiCommandPlusPlugin: NSObject, CBCentralManagerDelegate,
                             ongoingConnections[deviceId] = result
                             connectToDevice(
                                 deviceId: deviceId,
-                                type: deviceInfo["type"] as! String,
-                                ports: nil
+                                type: deviceInfo["type"] as! String
                             )
                         }
                     } else {
@@ -452,7 +420,7 @@ public class FlutterMidiCommandPlusPlugin: NSObject, CBCentralManagerDelegate,
         }
     }
 
-    func connectToDevice(deviceId: String, type: String, ports: [Port]?) {
+    func connectToDevice(deviceId: String, type: String) {
         print("connect \(deviceId) \(type)")
 
         if type == "BLE" {
@@ -464,8 +432,7 @@ public class FlutterMidiCommandPlusPlugin: NSObject, CBCentralManagerDelegate,
                     type: type,
                     streamHandler: rxStreamHandler,
                     result: ongoingConnections[deviceId],
-                    peripheral: periph,
-                    ports: ports
+                    peripheral: periph
                 )
                 connectedDevices[deviceId] = device
                 manager.stopScan()
@@ -495,14 +462,12 @@ public class FlutterMidiCommandPlusPlugin: NSObject, CBCentralManagerDelegate,
                     type: type,
                     streamHandler: rxStreamHandler,
                     client: midiClient,
-                    ports: ports
                 )
                 : ConnectedVirtualDevice(
                     id: deviceId,
                     type: type,
                     streamHandler: rxStreamHandler,
                     client: midiClient,
-                    ports: ports
                 )
             print("connected to \(device) \(deviceId)")
             connectedDevices[deviceId] = device
@@ -517,10 +482,10 @@ public class FlutterMidiCommandPlusPlugin: NSObject, CBCentralManagerDelegate,
         let device = connectedDevices[deviceId]
         print("disconnect \(String(describing: device)) for id \(deviceId)")
         if let device = device {
-            if device.deviceType == "BLE" {
+            if device.type == .ble {
                 let p = (device as! ConnectedBLEDevice).peripheral
                 manager.cancelPeripheralConnection(p)
-            } else if device.deviceType == "own-virtual" {
+            } else if device.type == .ownVirtual {
                 print("disconnected MIDI")
                 (device as! ConnectedOwnVirtualDevice).isConnected = false
                 updateSetupState(data: "deviceDisconnected")
@@ -549,316 +514,6 @@ public class FlutterMidiCommandPlusPlugin: NSObject, CBCentralManagerDelegate,
                 device.send(bytes: bytes, timestamp: timestamp, portId: portId)
             })
         }
-    }
-
-    static func getMIDIProperty(_ prop: CFString, fromObject obj: MIDIObjectRef)
-        -> String
-    {
-        var param: Unmanaged<CFString>?
-        var result: String = "Error"
-        let err: OSStatus = MIDIObjectGetStringProperty(obj, prop, &param)
-        if err == OSStatus(noErr) {
-            result = param!.takeRetainedValue() as String
-        }
-        return result
-    }
-
-    static func isNetwork(device: MIDIObjectRef) -> Bool {
-        var isNetwork: Bool = false
-
-        var list: Unmanaged<CFPropertyList>?
-        MIDIObjectGetProperties(device, &list, true)
-        if let list = list {
-            let dict = list.takeRetainedValue() as! NSDictionary
-            if dict["apple.midirtp.session"] != nil {
-                isNetwork = true
-            }
-        }
-        return isNetwork
-    }
-
-    func createPortDict(count: Int) -> [[String: Any]] {
-        return (0..<count).map { (id) -> [String: Any] in
-            return ["id": id, "connected": false]
-        }
-    }
-
-    func getDevices() -> [[String: Any]] {
-        var devices: [[String: Any]] = []
-
-        // ######
-        // Native
-        // ######
-
-        var nativeDevices = [MIDIEntityRef: [String: Any]]()
-
-        let destinationCount = MIDIGetNumberOfDestinations()
-        for d in 0..<destinationCount {
-            let destination = MIDIGetDestination(d)
-            //            print("dest \(destination) \(FlutterMidiCommandPlusPlugin.getMIDIProperty(kMIDIPropertyName, fromObject: destination))")
-
-            if isVirtualEndpoint(endpoint: destination) {
-                continue
-            }
-
-            var entity: MIDIEntityRef = 0
-            var status = MIDIEndpointGetEntity(destination, &entity)
-            if status != noErr {
-                print("Error \(status) while calling MIDIEndpointGetEntity")
-            }
-
-            let isNetwork = FlutterMidiCommandPlusPlugin.isNetwork(
-                device: entity
-            )
-
-            var device: MIDIDeviceRef = 0
-            status = MIDIEntityGetDevice(entity, &device)
-            if status != noErr {
-                print("Error \(status) while calling MIDIEntityGetDevice")
-            }
-
-            let name = displayName(endpoint: destination)
-
-            let entityCount = MIDIDeviceGetNumberOfEntities(device)
-            //            print("entityCount \(entityCount)")
-
-            var entityIndex = 0
-            for e in 0..<entityCount {
-                let ent = MIDIDeviceGetEntity(device, e)
-                //                print("ent \(ent)")
-                if ent == entity {
-                    entityIndex = e
-                }
-            }
-            //            print("entityIndex \(entityIndex)")
-            let deviceId = "\(device):\(entityIndex)"
-
-            let entityDestinationCount = MIDIEntityGetNumberOfDestinations(
-                entity
-            )
-            //            print("entiry dest count \(entityDestinationCount)")
-
-            nativeDevices[entity] = [
-                "name": name,
-                "id": deviceId,
-                "type": isNetwork ? "network" : "native",
-                "connected":
-                    (connectedDevices.keys.contains(deviceId)
-                    ? "true" : "false"),
-                "outputs": createPortDict(count: entityDestinationCount),
-            ]
-        }
-
-        let sourceCount = MIDIGetNumberOfSources()
-        for s in 0..<sourceCount {
-            let source = MIDIGetSource(s)
-            //            print("src \(source) \(FlutterMidiCommandPlusPlugin.getMIDIProperty(kMIDIPropertyName, fromObject: source))")
-
-            if isVirtualEndpoint(endpoint: source) {
-                continue
-            }
-
-            var entity: MIDIEntityRef = 0
-            var status = MIDIEndpointGetEntity(source, &entity)
-            if status != noErr {
-                print("Error \(status) while calling MIDIEndpointGetEntity")
-            }
-            let isNetwork = FlutterMidiCommandPlusPlugin.isNetwork(
-                device: entity
-            )
-            let name = displayName(endpoint: source)
-
-            var device: MIDIDeviceRef = 0
-            status = MIDIEntityGetDevice(entity, &device)
-            if status != noErr {
-                print("Error \(status) while calling MIDIEntityGetDevice")
-            }
-
-            let entityCount = MIDIDeviceGetNumberOfEntities(device)
-            //            print("entityCount \(entityCount)")
-
-            var entityIndex = 0
-            for e in 0..<entityCount {
-                let ent = MIDIDeviceGetEntity(device, e)
-                //                print("ent \(ent)")
-                if ent == entity {
-                    entityIndex = e
-                }
-            }
-            //            print("entityIndex \(entityIndex)")
-
-            let deviceId = "\(device):\(entityIndex)"
-
-            let entitySourceCount = MIDIEntityGetNumberOfSources(entity)
-            //            print("entiry source count \(entitySourceCount)")
-
-            if var deviceDict = nativeDevices[entity] {
-                //                print("add inputs to dict")
-                deviceDict["inputs"] = createPortDict(count: entitySourceCount)
-                //                print(type(of: createPortDict(count: entitySourceCount)))
-                nativeDevices[entity] = deviceDict
-            } else {
-                //                print("create inputs dict")
-                nativeDevices[entity] = [
-                    "name": name,
-                    "id": deviceId,
-                    "type": isNetwork ? "network" : "native",
-                    "connected":
-                        (connectedDevices.keys.contains(deviceId)
-                        ? "true" : "false"),
-                    "inputs": createPortDict(count: entitySourceCount),
-                ]
-            }
-        }
-
-        devices.append(contentsOf: nativeDevices.values)
-
-        // ######
-        // BLE
-        // ######
-
-        for periph: CBPeripheral in discoveredDevices {
-            let id = periph.identifier.uuidString
-            devices.append([
-                "name": periph.name ?? "Unknown",
-                "id": id,
-                "type": "BLE",
-                "connected":
-                    (connectedDevices.keys.contains(id) ? "true" : "false"),
-                "inputs": [["id": 0, "connected": false] as [String: Any]],
-                "outputs": [["id": 0, "connected": false] as [String: Any]],
-            ])
-        }
-
-        // ###########
-        // CONNECTED BLE DEVICES (which are no longer discoverable)
-        // ###########
-
-        connectedDevices.forEach({ (key: String, value: ConnectedDevice) in
-            if value.deviceType == "BLE"
-                && !discoveredDevices.contains(where: { periph in
-                    periph.identifier.uuidString == key
-                })
-            {
-                if let bleDev = value as? ConnectedBLEDevice {
-                    devices.append([
-                        "name": bleDev.peripheral.name ?? "Unknown",
-                        "id": key,
-                        "type": "BLE",
-                        "connected": "true",
-                        "inputs": [
-                            ["id": 0, "connected": true] as [String: Any]
-                        ],
-                        "outputs": [
-                            ["id": 0, "connected": true] as [String: Any]
-                        ],
-                    ])
-                }
-            }
-        })
-
-        // #######
-        // VIRTUAL
-        // #######
-
-        var virtualDevices = [MIDIEntityRef: [String: Any]]()
-
-        for d in 0..<destinationCount {
-            let destination = MIDIGetDestination(d)
-
-            if !isVirtualEndpoint(endpoint: destination) {
-                continue
-            }
-
-            if isOwnVirtualEndpoint(endpoint: destination) {
-                continue
-            }
-
-            let displayName = FlutterMidiCommandPlusPlugin.getMIDIProperty(
-                kMIDIPropertyDisplayName,
-                fromObject: destination
-            )
-            let id = stringToId(str: displayName)  // Will cause conflicts when multiple virtual endpoints with the same name exist
-
-            virtualDevices[id] = [
-                "name": displayName,
-                "id": "\(destination)",
-                "type": "virtual",
-                "connected":
-                    (connectedDevices.keys.contains(String(destination))
-                    ? "true" : "false"),
-                "outputs": createPortDict(count: 1),
-            ]
-        }
-
-        for s in 0..<sourceCount {
-            let source = MIDIGetSource(s)
-
-            if !isVirtualEndpoint(endpoint: source) {
-                continue
-            }
-
-            if isOwnVirtualEndpoint(endpoint: source) {
-                continue
-            }
-
-            let displayName = FlutterMidiCommandPlusPlugin.getMIDIProperty(
-                kMIDIPropertyDisplayName,
-                fromObject: source
-            )
-            let id = stringToId(str: displayName)  // Will cause conflicts when multiple virtual endpoints with the same name exist
-
-            if var deviceDict = virtualDevices[id] {
-                deviceDict["inputs"] = createPortDict(count: 1)
-                let destination = deviceDict["id"] as? String ?? ""
-                let id2 = "\(destination):\(source)"
-                deviceDict["id"] = id2
-                deviceDict["connected"] =
-                    (connectedDevices.keys.contains(id2) ? "true" : "false")
-                virtualDevices[id] = deviceDict
-
-            } else {
-                //                print("create inputs dict")
-                let id2 = ":\(source)"
-                virtualDevices[id] = [
-                    "name": displayName,
-                    "id": id2,
-                    "type": "virtual",
-                    "connected":
-                        (connectedDevices.keys.contains(id2)
-                        ? "true" : "false"),
-                    "inputs": createPortDict(count: 1),
-                ]
-            }
-        }
-
-        devices.append(contentsOf: virtualDevices.values)
-
-        // ###########
-        // OWN VIRTUAL
-        // ###########
-
-        var ownVirtualDevices = [MIDIEntityRef: [String: Any]]()
-
-        for ownVirtualDevice in self.ownVirtualDevices {
-            let displayName = ownVirtualDevice.deviceName
-            let id = stringToId(str: displayName)
-
-            ownVirtualDevices[id] = [
-                "name": displayName,
-                "id": "\(id)",
-                "type": "own-virtual",
-                "connected":
-                    (connectedDevices.keys.contains(String(id))
-                    ? "true" : "false"),
-                "outputs": createPortDict(count: 1),
-                "inputs": createPortDict(count: 1),
-            ]
-        }
-
-        devices.append(contentsOf: ownVirtualDevices.values)
-
-        return devices
     }
 
     func handleMIDINotification(
@@ -1162,43 +817,10 @@ class StreamHandler: NSObject, FlutterStreamHandler {
 }
 ////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////
-class Port {
-    var id: Int
-    var type: String
-
-    init(id: Int, type: String) {
-        self.id = id
-        self.type = type
-    }
-}
-
-class ConnectedDevice: NSObject {
-    var id: String
-    var deviceType: String
-    var streamHandler: StreamHandler
-
-    init(id: String, type: String, streamHandler: StreamHandler) {
-        self.id = id
-        self.deviceType = type
-        self.streamHandler = streamHandler
-    }
-
-    func openPorts() {}
-
-    func send(bytes: [UInt8], timestamp: UInt64?, portId: UInt64?) {}
-
-    func close() {}
-}
-////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////
 class ConnectedVirtualOrNativeDevice: ConnectedDevice {
-    var ports: [Port]?
-    var outputPort = MIDIPortRef()
-    var inputPort = MIDIPortRef()
+    var portEndPoints: [MIDIEndpointRef] = []
     var client: MIDIClientRef
     var name: String?
-    var outEndpoint: MIDIEndpointRef?
-    var inSource: MIDIEndpointRef?
     var deviceInfo: [String: String?]
 
     init(
@@ -1206,11 +828,9 @@ class ConnectedVirtualOrNativeDevice: ConnectedDevice {
         type: String,
         streamHandler: StreamHandler,
         client: MIDIClientRef,
-        ports: [Port]?
     ) {
         self.client = client
-        self.ports = ports
-
+        //self.portEndPoints = [MIDIClientRef](repeating: MIDIClientRef(), count: ports.count)
         deviceInfo = [
             "name": name,
             "id": String(id),
@@ -1223,7 +843,10 @@ class ConnectedVirtualOrNativeDevice: ConnectedDevice {
 
     override func send(bytes: [UInt8], timestamp: UInt64?, portId: UInt64?) {
         print("send \(bytes.count) bytes to \(String(describing: name))")
-        if let ep = outEndpoint {
+        let pid = MIDIPortRef(UInt32(portId ?? 0))
+        /*
+        let outputPort: MIDIPortRef =
+        if let ep = ports {
             splitDataIntoMIDIPackets(bytes: bytes, timestamp: timestamp) {
                 packetListPointer in
                 var port = outputPort
@@ -1235,6 +858,7 @@ class ConnectedVirtualOrNativeDevice: ConnectedDevice {
         } else {
             print("No MIDI destination for id \(name!)")
         }
+         */
     }
 
     func splitDataIntoMIDIPackets(
@@ -1297,12 +921,13 @@ class ConnectedVirtualOrNativeDevice: ConnectedDevice {
         //   MIDIEndpointDispose(oEP)
         // }
 
+        /*
         if let iS = inSource {
             MIDIPortDisconnectSource(inputPort, iS)
         }
-
         MIDIPortDispose(inputPort)
         MIDIPortDispose(outputPort)
+         */
     }
 
     var buffer = UnsafeMutablePointer<MIDIPacket>.allocate(capacity: 2)  // Don't know why I need to a capacity of 2 here. If I setup 1 I'm getting a crash.
@@ -1410,7 +1035,7 @@ class ConnectedVirtualOrNativeDevice: ConnectedDevice {
             let midiData =
                 [
                     "data": midiBuffer, "timestamp": timestamp,
-                    "device": deviceInfo,
+                    "deviceId": deviceInfo.id,
                 ] as [String: Any]
             DispatchQueue.main.async {
                 self.streamHandler.send(data: midiData)
@@ -1442,25 +1067,20 @@ class ConnectedVirtualOrNativeDevice: ConnectedDevice {
 ////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////
 class ConnectedNativeDevice: ConnectedVirtualOrNativeDevice {
-
     var entity: MIDIEntityRef?
-
     override init(
         id: String,
         type: String,
         streamHandler: StreamHandler,
         client: MIDIClientRef,
-        ports: [Port]?
     ) {
         super.init(
             id: id,
             type: type,
             streamHandler: streamHandler,
             client: client,
-            ports: ports
         )
 
-        self.ports = ports
         let idParts = id.split(separator: ":")
 
         // Store entity and get device/entity name
@@ -1499,6 +1119,7 @@ class ConnectedNativeDevice: ConnectedVirtualOrNativeDevice {
             "type": "native",
         ]
 
+        /*
         // MIDI Input with handler
         MIDIInputPortCreateWithBlock(
             client,
@@ -1507,68 +1128,62 @@ class ConnectedNativeDevice: ConnectedVirtualOrNativeDevice {
         ) { (packetList, srcConnRefCon) in
             self.handlePacketList(packetList, srcConnRefCon: srcConnRefCon)
         }
-
+        
         // MIDI output
         MIDIOutputPortCreate(
             client,
             "FlutterMidiCommand_OutPort" as CFString,
             &outputPort
         )
-
+        */
         openPorts()
     }
-
-    override func openPorts() {
-        print("open native ports")
-
-        if let e = entity {
-
-            let ref = Unmanaged.passUnretained(self).toOpaque()
-
-            if let ps = ports {
-                for port in ps {
-                    inSource = MIDIEntityGetSource(e, port.id)
-
-                    switch port.type {
-                    case "MidiPortType.IN":
-                        let status = MIDIPortConnectSource(
-                            inputPort,
-                            inSource!,
-                            ref
-                        )
-                        print("port open status \(status)")
-                    case "MidiPortType.OUT":
-                        outEndpoint = MIDIEntityGetDestination(e, port.id)
-                        //                    print("port endpoint \(endpoint)")
-                        break
-                    default:
-                        print("unknown port type \(port.type)")
+    /*
+        override func openPorts() {
+            print("open native ports")
+    
+            if let e = entity {
+    
+                let ref = Unmanaged.passUnretained(self).toOpaque()
+    
+                if let ps = ports {
+                    for port in ps {
+                        inSource = MIDIEntityGetSource(e, port.id)
+    
+                        switch port.type {
+                        case "MidiPortType.IN":
+                            let status = MIDIPortConnectSource(
+                                inputPort,
+                                inSource!,
+                                ref
+                            )
+                            print("port open status \(status)")
+                        case "MidiPortType.OUT":
+                            outEndpoint = MIDIEntityGetDestination(e, port.id)
+                            //                    print("port endpoint \(endpoint)")
+                            break
+                        default:
+                            print("unknown port type \(port.type)")
+                        }
                     }
                 }
-            } else {
-                print("open default ports")
-                inSource = MIDIEntityGetSource(e, 0)
-                let status = MIDIPortConnectSource(inputPort, inSource!, ref)
-                if status != noErr {
-                    print("Error \(status) while calling MIDIPortConnectSource")
-                }
-                outEndpoint = MIDIEntityGetDestination(e, 0)
             }
         }
-    }
-
+    */
     override func close() {
         /*
          if let oEP = outEndpoint {
          MIDIEndpointDispose(oEP)
          }
          */
+        /*
         if let iS = inSource {
             MIDIPortDisconnectSource(inputPort, iS)
         }
-
+        
         MIDIPortDispose(inputPort)
         MIDIPortDispose(outputPort)
+         */
     }
 
     override func handlePacketList(
@@ -1668,7 +1283,6 @@ class ConnectedVirtualDevice: ConnectedVirtualOrNativeDevice {
         type: String,
         streamHandler: StreamHandler,
         client: MIDIClientRef,
-        ports: [Port]?
     ) {
 
         super.init(
@@ -1676,20 +1290,20 @@ class ConnectedVirtualDevice: ConnectedVirtualOrNativeDevice {
             type: type,
             streamHandler: streamHandler,
             client: client,
-            ports: ports
         )
 
         let idParts = id.split(separator: ":")
         assert(idParts.count > 0)
+        /*
         outEndpoint =
             idParts.count > 0 && idParts[0].count > 0
             ? MIDIEndpointRef(idParts[0]) : nil
         inSource =
             idParts.count > 1 && idParts[1].count > 0
             ? MIDIEndpointRef(idParts[1]) : nil
-
+        
         name = displayName(endpoint: outEndpoint ?? inSource ?? 0)
-
+        
         // MIDI Input with handler
         MIDIInputPortCreateWithBlock(
             client,
@@ -1698,24 +1312,26 @@ class ConnectedVirtualDevice: ConnectedVirtualOrNativeDevice {
         ) { (packetList, srcConnRefCon) in
             self.handlePacketList(packetList, srcConnRefCon: srcConnRefCon)
         }
-
+        
         // MIDI output
         MIDIOutputPortCreate(
             client,
             "FlutterMidiCommand_OutPort" as CFString,
             &outputPort
         )
-
+        */
         openPorts()
     }
 
+    /*
     override func openPorts() {
-
+    
         if inSource != nil {
             let ref = Unmanaged.passUnretained(self).toOpaque()
             MIDIPortConnectSource(inputPort, inSource!, ref)
         }
     }
+     */
 }
 ////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -1728,7 +1344,6 @@ class ConnectedOwnVirtualDevice: ConnectedVirtualOrNativeDevice {
             type: "own-virtual",
             streamHandler: streamHandler,
             client: client,
-            ports: []
         )
         initVirtualSource()
         initVirtualDestination()
@@ -1945,7 +1560,6 @@ class ConnectedBLEDevice: ConnectedDevice, CBPeripheralDelegate {
         streamHandler: StreamHandler,
         result: FlutterResult?,
         peripheral: CBPeripheral,
-        ports: [Port]?
     ) {
         self.peripheral = peripheral
         self.connectResult = result
@@ -2090,8 +1704,7 @@ class ConnectedBLEDevice: ConnectedDevice, CBPeripheralDelegate {
         )
     }
 
-    func peripheralIsReady(toSendWriteWithoutResponse peripheral: CBPeripheral)
-    {
+    func peripheralIsReady(toSendWriteWithoutResponse peripheral: CBPeripheral) {
         dequeueMidiBytes()
     }
 
