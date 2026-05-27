@@ -122,6 +122,10 @@ class MidiCommand {
     _platform.stopScanningForBluetoothDevices();
   }
 
+  Future<bool> deviceConnected(MidiDevice device) async {
+    return _platform.deviceConnected(device);
+  }
+
   /// Connects to the device
   Future<void> connectToDevice(MidiDevice device) async {
     return _platform.connectToDevice(device);
