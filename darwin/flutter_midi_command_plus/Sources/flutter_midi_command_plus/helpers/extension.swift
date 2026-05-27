@@ -5,7 +5,7 @@ import os.log
 let midiLog = OSLog(subsystem: "com.invisiblewrench.FlutterMidiCommand", category: "MIDI")
 
 extension MIDIObjectRef {
-    func property(_ name: CFString) -> String? {
+    func stringProperty(_ name: CFString) -> String? {
         var param: Unmanaged<CFString>?
         let err: OSStatus = MIDIObjectGetStringProperty(self, name, &param)
         if err == OSStatus(noErr) {
@@ -13,6 +13,15 @@ extension MIDIObjectRef {
         }
         return nil
     }
+    func integerProperty(_ name:CFString) -> Int32? {
+        var value = Int32(0)
+        let err:OSStatus = MIDIObjectGetIntegerProperty(self, name, &value)
+        if err == OSStatus(noErr) {
+            return value
+        }
+        return nil
+    }
+    
 }
 extension MIDIEntityRef {
     func isNetwork() -> Bool {

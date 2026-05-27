@@ -100,12 +100,23 @@ class Client {
     }
     
     func connectDevice(deviceId: String) -> Bool {
-        // TODO:
+        if transports.keys.contains(deviceId) {
+            return true
+        }
+        if let device = getDevice(byId: deviceId) {
+            let transport = Transport.from(client:self,device:device)
+            transports[deviceId] = transport
+            transport.open()
+            return true
+        }
         return false
     }
 
     func disconnectDevice(deviceId: String) -> Bool {
-        // TODO:
+        if let transport = transports[deviceId] {
+            transports.removeValue(forKey: deviceId)
+            transport.close()
+        }
         return false
     }
 

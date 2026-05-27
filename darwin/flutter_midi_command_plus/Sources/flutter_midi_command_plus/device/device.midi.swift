@@ -14,7 +14,7 @@ extension Device {
     static func from(entity: MIDIEntityRef) -> Device {
         var device : MIDIDeviceRef = 0
         var status = MIDIEntityGetDevice(entity, &device)
-        var id = entity.property(kMIDIPropertyUniqueID)
+        var id = "\(entity.integerProperty(kMIDIPropertyUniqueID))"
         if id == nil {
             let count = MIDIDeviceGetNumberOfEntities(device)
             var index = 0;
@@ -28,7 +28,7 @@ extension Device {
             id = "\(device):\(index)"
         }
         let type: DeviceType = entity.isNetwork() ? .network : .native
-        let name = entity.property(kMIDIPropertyName) ?? device.property(kMIDIPropertyDisplayName) ?? "No name"
+        let name = entity.stringProperty(kMIDIPropertyName) ?? device.stringProperty(kMIDIPropertyDisplayName) ?? "No name"
         let inputs = entity.inputCount
         let outputs = entity.outputCount
         return Device(id: id!, type: type, name: name, inputs: inputs, outputs: outputs)
