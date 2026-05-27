@@ -50,6 +50,10 @@ abstract class MidiCommandPlatform extends PlatformInterface {
     );
   }
 
+  Future<bool> deviceConnected(MidiDevice device) {
+    throw UnimplementedError('deviceConnected() has not been implemented.');
+  }
+
   Future<void> connectToDevice(MidiDevice device) {
     throw UnimplementedError('connectToDevice() has not been implemented.');
   }

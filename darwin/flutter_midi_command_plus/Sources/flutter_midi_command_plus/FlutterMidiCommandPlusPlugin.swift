@@ -97,6 +97,25 @@ public class FlutterMidiCommandPlusPlugin: NSObject, FlutterPlugin {
             }
             result(devices)
             break
+        case "deviceConnected":
+            var connected: Bool? = nil
+            if let args = call.arguments as? [String: Any] {
+                if let id = args["deviceId"] as? String {
+                    connected = client.isConnected(deviceId: id)
+                    result(connected!)
+                }
+            }
+            if(connected == nil) {
+                result(
+                    FlutterError.init(
+                        code: "MESSAGEERROR",
+                        message: "Could not parse args",
+                        details: call.arguments
+                    )
+                )
+            }
+            break
+
         case "connectToDevice":
             if let args = call.arguments as? [String: Any] {
                 if let id = args["deviceId"] as? String {

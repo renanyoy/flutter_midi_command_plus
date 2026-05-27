@@ -34,19 +34,15 @@ extension Device {
         return Device(id: id!, type: type, name: name, inputs: inputs, outputs: outputs)
     }
 
-    static var devices: Set<Device> {
-        var devices: [MIDIEntityRef: Device] = [:]
+    static var entities : Set<MIDIEntityRef> {
         let destinationCount = MIDIGetNumberOfDestinations()
         let sourceCount = MIDIGetNumberOfSources()
         var entities: Set<MIDIEntityRef> = []
-        var noEntityDestination: [MIDIEndpointRef] = []
-        var noEntitySource: [MIDIEndpointRef] = []
         for d in 0..<destinationCount {
             let destination = MIDIGetDestination(d)
             var entity: MIDIEntityRef = 0
             var status = MIDIEndpointGetEntity(destination, &entity)
             if entity == nil {
-                noEntityDestination.append(destination)
                 continue
             }
             entities.insert(entity)
@@ -56,32 +52,27 @@ extension Device {
             var entity: MIDIEntityRef = 0
             var status = MIDIEndpointGetEntity(source, &entity)
             if entity == nil {
-                noEntitySource.append(source)
                 continue
             }
             entities.insert(entity)
         }
-        // TODO:
-
-        print("entities: \(entities.count)")
-        for e in entities {
-            if let name = e.property(kMIDIPropertyDisplayName) {
-                print("display: \(name)")
-            }
-            if let name = e.property(kMIDIPropertyName) {
-                print("name: \(name)")
-            }
-            if let uid = e.property(kMIDIPropertyUniqueID) {
-                print("uid: \(uid)")
-            }
-            if let id = e.property(kMIDIPropertyDeviceID) {
-                print("id: \(id)")
+        return entities
+    }
+            
+    static var devices: Set<Device> {
+        return Set(entities.map { Device.from(entity: $0) })
+    }
+    
+    var entity:MIDIEntityRef? {
+        for e in Device.entities {
+            let d = Device.from(entity: e)
+            if d.id == id {
+                return e
             }
         }
-        let d = Set(entities.map { Device.from(entity: $0) })
-        print("midi devices: \(d.count)")
-        return d
+        return nil
     }
+
     /*
     
     

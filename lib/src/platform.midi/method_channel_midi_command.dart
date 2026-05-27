@@ -80,6 +80,13 @@ class MethodChannelMidiCommand extends MidiCommandPlatform {
   }
 
   @override
+  Future<bool> deviceConnected(MidiDevice device) async  {
+    return await _methodChannel.invokeMethod('deviceConnected', {
+      "deviceId": device.id,
+    });
+  }
+
+  @override
   Future<void> connectToDevice(MidiDevice device) {
     return _methodChannel.invokeMethod('connectToDevice', {
       "deviceId": device.id,

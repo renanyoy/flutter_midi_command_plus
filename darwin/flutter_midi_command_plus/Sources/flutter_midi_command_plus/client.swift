@@ -31,6 +31,7 @@ class Client {
     var devices: Set<Device> {
         return Device.devices.union(bluetooth.devices)
     }
+    var transports: [String:Transport] = [:]
 
     func getDevice<T: Device>(byId id: String) -> T? {
         let d = devices.first { $0.id == id }
@@ -94,6 +95,10 @@ class Client {
         }
     }
 
+    func isConnected(deviceId:String) -> Bool {
+        return transports.keys.contains(deviceId)
+    }
+    
     func connectDevice(deviceId: String) -> Bool {
         // TODO:
         return false
