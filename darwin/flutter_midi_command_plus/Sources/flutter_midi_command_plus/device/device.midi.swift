@@ -14,7 +14,8 @@ extension Device {
     static func from(entity: MIDIEntityRef) -> Device {
         var device : MIDIDeviceRef = 0
         var status = MIDIEntityGetDevice(entity, &device)
-        var id = "\(entity.integerProperty(kMIDIPropertyUniqueID))"
+        var maybeId = entity.integerProperty(kMIDIPropertyUniqueID)
+        var id = maybeId != nil ? "\(maybeId)": nil
         if id == nil {
             let count = MIDIDeviceGetNumberOfEntities(device)
             var index = 0;

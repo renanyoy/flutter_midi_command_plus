@@ -12,7 +12,7 @@ class Transport {
     func close() {}
     func send(port: Int, data: [UInt8], timestamp: Int?) {}
     
-    static from(client: client, device:Device) : Transport {
+    static func from(client: client, device:Device) -> Transport {
         if let entity = device.entity {
             return MidiTransport(client:client,device:device,entity: entity)
         }

@@ -42,6 +42,9 @@ class Client {
     }
 
     deinit {
+        for transport in transports.values {
+            transport.close()
+        }
         MIDIClientDispose(clientRef)
     }
 
@@ -105,8 +108,8 @@ class Client {
         }
         if let device = getDevice(byId: deviceId) {
             let transport = Transport.from(client:self,device:device)
-            transports[deviceId] = transport
             transport.open()
+            transports[deviceId] = transport
             return true
         }
         return false

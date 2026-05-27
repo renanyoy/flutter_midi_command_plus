@@ -10,32 +10,33 @@ class MidiTransport : Transport {
         super.init(client: client, device: device)
     }
     override func open() {
-        MIDIInputPortCreateWithProtocol(client, "midi_command_\(device.id)_input_\(i)" as CFString, ._2_0, &inputPort[i]) { list, ref in
-            let port = ref as Int
+        MIDIInputPortCreateWithProtocol(client.clientRef, "midi_command_\(device.id)_input_port" as CFString, ._2_0, &inputPort) { list, ref in
+            let port = Int(bitPattern: ref)
             let num = list.pointee.numPackets
-            for packet:MIDIPacket in list.unsafeSequence() {
-                client.sendMidi(deviceId: device.id, port: port, data: packet.data.subdata(in: 0..<Int(packet.length)) ,timestamp: packet.timeStamp)
+            for packet in list.unsafeSequence() {
+                
+                self.client.sendMidi(deviceId: device.id, port: port, data: packet.data.subdata(in: 0..<Int(packet.length)) ,timestamp: packet.timeStamp)
             }
         }
         for i in 0..<device.inputs {
             let source = MIDIEntityGetSource(entity, i)
             let status = MIDIPortConnectSource(inputPort, source, i)
         }
-        MIDIOutputPortCreate(client, "midi_command_\(device_id)_output_\(i)" as CFString, &outputPort);
-        for i in 0..<device.outputs {
-            let destination = MIDIEntityGetDestination(entity, i)
-        }
-        
-        
+        MIDIOutputPortCreate(client.clientRef, "midi_command_\(device.id)_output_port" as CFString, &outputPort);
     }
     override func close() {
-        // TODO: close all
+        for i in 0..<device.inputs {
+            let source = MIDIEntityGetSource(entity, i)
+            MIDIPortDisconnectSource(inputPort, source)
+        }
+        MIDIPortDispose(inputPort)
+        MIDIPortDispose(outputPort)
     }
-    override func send(port: Int, data: [UInt8], timestamp: Int?) {
+    override func send(port: Int, data: [UInt8], timestamp: UInt64 = 0) {
         let destination = MIDIEntityGetDestination(entity, i)
         var eventList: MIDIEventList = .init()
         var packet = MIDIEventListInit(&eventList, ._2_0)
-        MIDIEventListAdd(&eventList, 1024, packet, 0, data.count, data)
+        MIDIEventListAdd(&eventList, 1024, packet, timestamp, data.count/2, data)
         MIDISendEventList(outputPort, destination, &eventList)
     }
 }
