@@ -92,26 +92,22 @@ public class FlutterMidiCommandPlusPlugin: NSObject, FlutterPlugin
             client.bluetooth.stopScan()
             break
         case "getDevices":
-            let devices = Device.getDevices().map { $0.toDictionary() }
+            let devices = client.devices.map { $0.toDictionary() }
             result(devices)
             break
         case "connectToDevice":
             if let args = call.arguments as? [String: Any] {
                 if let deviceInfo = args["device"] as? [String: Any] {
                     if let deviceId = deviceInfo["id"] as? String {
-                        if connectedDevices[deviceId] != nil {
+                        if(client.connectDevice(deviceId: deviceId)) {
+                            result(nil)
+                        } else {
                             result(
                                 FlutterError.init(
                                     code: "MESSAGEERROR",
-                                    message: "Device already connected",
+                                    message: "can't connect to device",
                                     details: call.arguments
                                 )
-                            )
-                        } else {
-                            ongoingConnections[deviceId] = result
-                            connectToDevice(
-                                deviceId: deviceId,
-                                type: deviceInfo["type"] as! String
                             )
                         }
                     } else {
@@ -145,7 +141,7 @@ public class FlutterMidiCommandPlusPlugin: NSObject, FlutterPlugin
         case "disconnectDevice":
             if let deviceInfo = call.arguments as? [String: Any] {
                 if let deviceId = deviceInfo["id"] as? String {
-                    disconnectDevice(deviceId: deviceId)
+                    client.disconnectDevice(deviceId: deviceId)
                 } else {
                     result(
                         FlutterError.init(
@@ -169,6 +165,8 @@ public class FlutterMidiCommandPlusPlugin: NSObject, FlutterPlugin
             break
 
         case "sendData":
+            // TODO:
+            /*
             if let packet = call.arguments as? [String: Any],
                 let deviceId = packet["deviceId"] as? String, let port = packet["port"] as? UInt64
             {
@@ -188,9 +186,10 @@ public class FlutterMidiCommandPlusPlugin: NSObject, FlutterPlugin
                     )
                 )
             }
+             */
             break
         case "teardown":
-            teardown()
+            // TODO: disconnect all
             break
 
         case "addVirtualDevice":
@@ -242,27 +241,6 @@ public class FlutterMidiCommandPlusPlugin: NSObject, FlutterPlugin
             result(FlutterMethodNotImplemented)
         }
     }
-
-    func teardown() {
-        for device in connectedDevices {
-            disconnectDevice(deviceId: device.value.id)
-        }
-    }
-
-
-    func sendData(
-        _ data: FlutterStandardTypedData,
-        deviceId: String,
-        port: UInt64,
-        timestamp: UInt64?
-    ) {
-        let bytes = [UInt8](data.data)
-        if let device: ConnectedDevice = connectedDevices[deviceId] {
-            device.send(port: port, bytes: bytes, timestamp: timestamp)
-        }
-    }
-
-    /// BLE handling
 
 }
 ////////////////////////////////////////////////////////////////////////////////////////////

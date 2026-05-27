@@ -20,7 +20,7 @@ extension Device {
         return Device(id: id, type: type, name: name, inputs: inputs, outputs: outputs)
     }
 
-    static func getDevices() -> [Device] {
+    static var devices : Set<Device> {
         var devices: [MIDIEntityRef: Device] = [:]
         let destinationCount = MIDIGetNumberOfDestinations()
         let sourceCount = MIDIGetNumberOfSources()
@@ -47,183 +47,11 @@ extension Device {
             }
             entities.insert(entity)
         }
-        return entities.map { Device.from(ref: $0) }
+        return Set(entities.map { Device.from(ref: $0) })
     }
     /*
     
-    static func getDevices() -> [[String: Any]] {
-        var devices: [[String: Any]] = []
     
-        // ######
-        // Native
-        // ######
-    
-        var nativeDevices = [MIDIEntityRef: [String: Any]]()
-    
-        let destinationCount = MIDIGetNumberOfDestinations()
-        for d in 0..<destinationCount {
-            let destination = MIDIGetDestination(d)
-            //            print("dest \(destination) \(FlutterMidiCommandPlusPlugin.getMIDIProperty(kMIDIPropertyName, fromObject: destination))")
-    
-            if isVirtualEndpoint(endpoint: destination) {
-                continue
-            }
-    
-            var entity: MIDIEntityRef = 0
-            var status = MIDIEndpointGetEntity(destination, &entity)
-            if status != noErr {
-                print("Error \(status) while calling MIDIEndpointGetEntity")
-            }
-    
-            let isNetwork = FlutterMidiCommandPlusPlugin.isNetwork(
-                device: entity
-            )
-    
-            var device: MIDIDeviceRef = 0
-            status = MIDIEntityGetDevice(entity, &device)
-            if status != noErr {
-                print("Error \(status) while calling MIDIEntityGetDevice")
-            }
-    
-            let name = displayName(endpoint: destination)
-    
-            let entityCount = MIDIDeviceGetNumberOfEntities(device)
-            //            print("entityCount \(entityCount)")
-    
-            var entityIndex = 0
-            for e in 0..<entityCount {
-                let ent = MIDIDeviceGetEntity(device, e)
-                //                print("ent \(ent)")
-                if ent == entity {
-                    entityIndex = e
-                }
-            }
-            //            print("entityIndex \(entityIndex)")
-            let deviceId = "\(device):\(entityIndex)"
-    
-            let entityDestinationCount = MIDIEntityGetNumberOfDestinations(
-                entity
-            )
-            //            print("entiry dest count \(entityDestinationCount)")
-    
-            nativeDevices[entity] = [
-                "name": name,
-                "id": deviceId,
-                "type": isNetwork ? "network" : "native",
-                "connected":
-                    (connectedDevices.keys.contains(deviceId)
-                     ? "true" : "false"),
-                "outputs": createPortDict(count: entityDestinationCount),
-            ]
-        }
-    
-        let sourceCount = MIDIGetNumberOfSources()
-        for s in 0..<sourceCount {
-            let source = MIDIGetSource(s)
-            //            print("src \(source) \(FlutterMidiCommandPlusPlugin.getMIDIProperty(kMIDIPropertyName, fromObject: source))")
-    
-            if isVirtualEndpoint(endpoint: source) {
-                continue
-            }
-    
-            var entity: MIDIEntityRef = 0
-            var status = MIDIEndpointGetEntity(source, &entity)
-            if status != noErr {
-                print("Error \(status) while calling MIDIEndpointGetEntity")
-            }
-            let isNetwork = FlutterMidiCommandPlusPlugin.isNetwork(
-                device: entity
-            )
-            let name = displayName(endpoint: source)
-    
-            var device: MIDIDeviceRef = 0
-            status = MIDIEntityGetDevice(entity, &device)
-            if status != noErr {
-                print("Error \(status) while calling MIDIEntityGetDevice")
-            }
-    
-            let entityCount = MIDIDeviceGetNumberOfEntities(device)
-            //            print("entityCount \(entityCount)")
-    
-            var entityIndex = 0
-            for e in 0..<entityCount {
-                let ent = MIDIDeviceGetEntity(device, e)
-                //                print("ent \(ent)")
-                if ent == entity {
-                    entityIndex = e
-                }
-            }
-            //            print("entityIndex \(entityIndex)")
-    
-            let deviceId = "\(device):\(entityIndex)"
-    
-            let entitySourceCount = MIDIEntityGetNumberOfSources(entity)
-            //            print("entiry source count \(entitySourceCount)")
-    
-            if var deviceDict = nativeDevices[entity] {
-                //                print("add inputs to dict")
-                deviceDict["inputs"] = createPortDict(count: entitySourceCount)
-                //                print(type(of: createPortDict(count: entitySourceCount)))
-                nativeDevices[entity] = deviceDict
-            } else {
-                //                print("create inputs dict")
-                nativeDevices[entity] = [
-                    "name": name,
-                    "id": deviceId,
-                    "type": isNetwork ? "network" : "native",
-                    "connected":
-                        (connectedDevices.keys.contains(deviceId)
-                         ? "true" : "false"),
-                    "inputs": createPortDict(count: entitySourceCount),
-                ]
-            }
-        }
-    
-        devices.append(contentsOf: nativeDevices.values)
-    
-        // ######
-        // BLE
-        // ######
-    
-        for periph: CBPeripheral in discoveredDevices {
-            let id = periph.identifier.uuidString
-            devices.append([
-                "name": periph.name ?? "Unknown",
-                "id": id,
-                "type": "BLE",
-                "connected":
-                    (connectedDevices.keys.contains(id) ? "true" : "false"),
-                "inputs": [["id": 0, "connected": false] as [String: Any]],
-                "outputs": [["id": 0, "connected": false] as [String: Any]],
-            ])
-        }
-    
-        // ###########
-        // CONNECTED BLE DEVICES (which are no longer discoverable)
-        // ###########
-    
-        connectedDevices.forEach({ (key: String, value: ConnectedDevice) in
-            if value.type == .ble
-                && !discoveredDevices.contains(where: { periph in
-                    periph.identifier.uuidString == key
-                })
-            {
-                if let bleDev = value as? ConnectedBLEDevice {
-                    devices.append([
-                        "name": bleDev.peripheral.name ?? "Unknown",
-                        "id": key,
-                        "type": "BLE",
-                        "connected": "true",
-                        "inputs": [
-                            ["id": 0, "connected": true] as [String: Any]
-                        ],
-                        "outputs": [
-                            ["id": 0, "connected": true] as [String: Any]
-                        ],
-                    ])
-                }
-            }
-        })
     
         // #######
         // VIRTUAL

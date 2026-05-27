@@ -27,7 +27,16 @@ class Client {
         // Network Session
         var session: MIDINetworkSession?
     #endif
+    
+    var devices: Set<Device> {
+        return Device.devices.union(bluetooth.devices)
+    }
 
+    func getDevice<T:Device>(byId id: String) -> T? {
+        let d = devices.first { $0.id == id }
+        return d as? T
+    }
+    
     init() {
     }
 
@@ -77,8 +86,16 @@ class Client {
         }
     }
 
-    func connectDevice(deviceId:String) {
+    func connectDevice(deviceId:String) -> Bool {
+        // TODO:
+        return false;
     }
+
+    func disconnectDevice(deviceId:String) -> Bool {
+        // TODO:
+        return false;
+    }
+
     
     func handleMIDINotification(
         _ midiNotification: UnsafePointer<MIDINotification>
