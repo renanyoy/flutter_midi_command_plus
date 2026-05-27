@@ -8,6 +8,8 @@
 import CoreMIDI
 import Foundation
 
+////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////
 extension Device {
     static func from(ref: MIDIEntityRef) -> Device {
         let id = ref.property(kMIDIPropertyUniqueID)!
@@ -45,10 +47,10 @@ extension Device {
             }
             entities.insert(entity)
         }
-        return entities.map { Device.from(ref:$0) }
+        return entities.map { Device.from(ref: $0) }
     }
     /*
-     
+    
     static func getDevices() -> [[String: Any]] {
         var devices: [[String: Any]] = []
     
@@ -328,3 +330,5 @@ extension Device {
     }
     */
 }
+////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////

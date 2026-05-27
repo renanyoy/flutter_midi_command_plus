@@ -1,5 +1,8 @@
 import CoreMIDI
 import Foundation
+import os.log
+
+let midiLog = OSLog(subsystem: "com.invisiblewrench.FlutterMidiCommand", category: "MIDI")
 
 extension MIDIObjectRef {
     func property(_ name: CFString) -> String? {
@@ -28,5 +31,46 @@ extension MIDIEntityRef {
     }
     var outputCount: Int {
         return Int(MIDIEntityGetNumberOfDestinations(self))
+    }
+}
+
+extension MIDIObjectType {
+    func log() {
+        switch self {
+        case .other:
+            os_log("midiObjectType: Other", log: midiLog, type: .debug)
+            break
+        case .device:
+            os_log("midiObjectType: Device", log: midiLog, type: .debug)
+            break
+        case .entity:
+            os_log("midiObjectType: Entity", log: midiLog, type: .debug)
+            break
+        case .source:
+            os_log("midiObjectType: Source", log: midiLog, type: .debug)
+            break
+        case .destination:
+            os_log("midiObjectType: Destination", log: midiLog, type: .debug)
+            break
+        case .externalDevice:
+            os_log("midiObjectType: ExternalDevice", log: midiLog, type: .debug)
+            break
+        case .externalEntity:
+            print("midiObjectType: ExternalEntity")
+            os_log("midiObjectType: ExternalEntity", log: midiLog, type: .debug)
+            break
+        case .externalSource:
+            os_log("midiObjectType: ExternalSource", log: midiLog, type: .debug)
+            break
+        case .externalDestination:
+            os_log(
+                "midiObjectType: ExternalDestination",
+                log: midiLog,
+                type: .debug
+            )
+            break
+        @unknown default:
+            break
+        }
     }
 }

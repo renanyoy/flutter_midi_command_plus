@@ -66,9 +66,12 @@ class Device: Hashable {
 ////////////////////////////////////////////////////////////////////////////////////////////
 class ConnectedDevice: Device {
     var streamHandler: StreamHandler? = nil
-    func send(port: Int, bytes: [UInt8], timestamp: UInt64?) {}
-    func open() {}
-    func close() {}
+    func send(port: UInt64, bytes: [UInt8], timestamp: UInt64?) {}
+    func open(streamHandler: StreamHandler) {
+        self.streamHandler = streamHandler
+    }
+    func close() {
+    }
 }
 ////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////
