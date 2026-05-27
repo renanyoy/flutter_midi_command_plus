@@ -4,7 +4,6 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'method_channel_midi_command.dart';
 import 'midi_device.dart';
 import 'midi_packet.dart';
-import 'midi_port.dart';
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -51,7 +50,7 @@ abstract class MidiCommandPlatform extends PlatformInterface {
     );
   }
 
-  Future<void> connectToDevice(MidiDevice device, {List<MidiPort>? ports}) {
+  Future<void> connectToDevice(MidiDevice device) {
     throw UnimplementedError('connectToDevice() has not been implemented.');
   }
 

@@ -30,8 +30,7 @@ func stringToId(str: String) -> UInt32 {
 }
 ////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////
-public class FlutterMidiCommandPlusPlugin: NSObject, FlutterPlugin
-{
+public class FlutterMidiCommandPlusPlugin: NSObject, FlutterPlugin {
     let client = Client()
     //var ownVirtualDevices = Set<ConnectedOwnVirtualDevice>()
 
@@ -42,12 +41,12 @@ public class FlutterMidiCommandPlusPlugin: NSObject, FlutterPlugin
             var messenger = registrar.messenger()
         #endif
         let channel = FlutterMethodChannel(
-            name: "plugins.invisiblewrench.com/flutter_midi_command",
+            name: "plugins.aestesis.org/flutter_midi_command",
             binaryMessenger: messenger
         )
         let instance = FlutterMidiCommandPlusPlugin()
         registrar.addMethodCallDelegate(instance, channel: channel)
-        instance.client.setup(registrar:registrar)
+        instance.client.setup(registrar: registrar)
     }
 
     deinit {
@@ -93,29 +92,22 @@ public class FlutterMidiCommandPlusPlugin: NSObject, FlutterPlugin
             break
         case "getDevices":
             let devices = client.devices.map { $0.toDictionary() }
+            for d in devices {
+                print("\(d)")
+            }
             result(devices)
             break
         case "connectToDevice":
             if let args = call.arguments as? [String: Any] {
-                if let deviceInfo = args["device"] as? [String: Any] {
-                    if let deviceId = deviceInfo["id"] as? String {
-                        if(client.connectDevice(deviceId: deviceId)) {
-                            result(nil)
-                        } else {
-                            result(
-                                FlutterError.init(
-                                    code: "MESSAGEERROR",
-                                    message: "can't connect to device",
-                                    details: call.arguments
-                                )
-                            )
-                        }
+                if let id = args["deviceId"] as? String {
+                    if client.connectDevice(deviceId: id) {
+                        result(nil)
                     } else {
                         result(
                             FlutterError.init(
                                 code: "MESSAGEERROR",
-                                message: "No device Id",
-                                details: deviceInfo
+                                message: "unknown device id: \(id)",
+                                details: call.arguments
                             )
                         )
                     }
@@ -123,7 +115,7 @@ public class FlutterMidiCommandPlusPlugin: NSObject, FlutterPlugin
                     result(
                         FlutterError.init(
                             code: "MESSAGEERROR",
-                            message: "Could not parse deviceInfo",
+                            message: "missing deviceId field ina args",
                             details: call.arguments
                         )
                     )

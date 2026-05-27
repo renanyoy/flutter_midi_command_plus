@@ -1,5 +1,5 @@
 name: flutter_midi_command_plus
-description: "A new Flutter plugin project."
+description: "flutter midi command center - handle multiple midi ports by device"
 version: 0.0.1
 homepage: https://github.com/renanyoy/flutter_midi_command_plus
 publish_to: none

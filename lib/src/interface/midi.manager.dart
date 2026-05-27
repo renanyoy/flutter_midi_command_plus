@@ -51,9 +51,7 @@ class MidiManager {
 
   void dispose() {
     for (final device in devices) {
-      if (device.connected) {
-        mc.disconnectDevice(device);
-      }
+      mc.disconnectDevice(device);
     }
     stateSub?.cancel();
     setupSub?.cancel();
@@ -65,21 +63,18 @@ class MidiManager {
     // add added
     for (final device in devscan) {
       if (!devices.contains(device)) {
-        if (!device.connected) {
-          try {
-            await mc.connectToDevice(device);
-            Debug.info('connected device ${device.name}');
-          } catch (_) {}
-          device.connected = true;
+        try {
+          await mc.connectToDevice(device);
+        } catch (error) {
+          Debug.info(error);
         }
+        Debug.info('connected device ${device.name}');
         Debug.info('added device ${device.name}');
         devices.add(device);
       }
     }
     // remove removed
-    devices.removeWhere(
-      (device) => !devscan.contains(device)
-    );
+    devices.removeWhere((device) => !devscan.contains(device));
     devices.sortBy((d) => d.name);
     if (!DeepCollectionEquality().equals(odevices, {...devices})) {
       onDevicesChanged.fire(devices);

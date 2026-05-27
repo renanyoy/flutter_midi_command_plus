@@ -14,9 +14,8 @@ import Foundation
     import FlutterMacOS
 #endif
 
-
-class BluetoothDeviceDelegate : NSObject, CBPeripheralDelegate {
-    var client:Client?
+class BluetoothDeviceDelegate: NSObject, CBPeripheralDelegate {
+    var client: Client?
     var device: BluetoothDevice
     var peripheral: CBPeripheral
     var characteristic: CBCharacteristic?
@@ -55,14 +54,13 @@ class BluetoothDeviceDelegate : NSObject, CBPeripheralDelegate {
     deinit {
         CBCentralManager().cancelPeripheralConnection(peripheral)
     }
-    
-    func setupBLE(client:Client) {
+
+    func setupBLE(client: Client) {
         self.client = client
         peripheral.delegate = self
         peripheral.discoverServices([CBUUID(string: "03B80E5A-EDE8-4B33-A751-6CE34EC4C700")])
     }
 
-    
     func send(bytes: [UInt8], timestamp: UInt64?) {
         //        print("ble send \(id) \(bytes)")
         if characteristic != nil {
@@ -161,7 +159,6 @@ class BluetoothDeviceDelegate : NSObject, CBPeripheralDelegate {
         }
     }
 
-
     func enqueueMidiData(bytes: Data) {
         outboundMessageQueue.append(bytes)
 
@@ -187,6 +184,8 @@ class BluetoothDeviceDelegate : NSObject, CBPeripheralDelegate {
 
     func createMessageEvent(_ bytes: [UInt8], timestamp: UInt64, peripheral: CBPeripheral) {
         //        print("send rx event \(bytes)")
+        // TODO:
+        /*
         let data = Data(bytes: bytes, count: Int(bytes.count))
         DispatchQueue.main.async {
             self.streamHandler.send(
@@ -199,8 +198,8 @@ class BluetoothDeviceDelegate : NSObject, CBPeripheralDelegate {
                     ],
                 ] as [String: Any])
         }
+         */
     }
-
 
     public func peripheral(
         _ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?
@@ -436,6 +435,5 @@ class BluetoothDeviceDelegate : NSObject, CBPeripheralDelegate {
         }
         return 0
     }
-
 
 }

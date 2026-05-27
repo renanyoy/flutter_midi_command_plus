@@ -11,16 +11,30 @@ import Foundation
 ////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////
 extension Device {
-    static func from(ref: MIDIEntityRef) -> Device {
-        let id = ref.property(kMIDIPropertyUniqueID)!
-        let type: DeviceType = ref.isNetwork() ? .network : .native
-        let name = ref.property(kMIDIPropertyDisplayName)!
-        let inputs = ref.inputCount
-        let outputs = ref.outputCount
-        return Device(id: id, type: type, name: name, inputs: inputs, outputs: outputs)
+    static func from(entity: MIDIEntityRef) -> Device {
+        var device : MIDIDeviceRef = 0
+        var status = MIDIEntityGetDevice(entity, &device)
+        var id = entity.property(kMIDIPropertyUniqueID)
+        if id == nil {
+            let count = MIDIDeviceGetNumberOfEntities(device)
+            var index = 0;
+            for e in 0..<count {
+                let ent = MIDIDeviceGetEntity(device, e)
+                if (ent == entity) {
+                    index = e
+                    break;
+                }
+            }
+            id = "\(device):\(index)"
+        }
+        let type: DeviceType = entity.isNetwork() ? .network : .native
+        let name = entity.property(kMIDIPropertyName) ?? device.property(kMIDIPropertyDisplayName) ?? "No name"
+        let inputs = entity.inputCount
+        let outputs = entity.outputCount
+        return Device(id: id!, type: type, name: name, inputs: inputs, outputs: outputs)
     }
 
-    static var devices : Set<Device> {
+    static var devices: Set<Device> {
         var devices: [MIDIEntityRef: Device] = [:]
         let destinationCount = MIDIGetNumberOfDestinations()
         let sourceCount = MIDIGetNumberOfSources()
@@ -47,7 +61,26 @@ extension Device {
             }
             entities.insert(entity)
         }
-        return Set(entities.map { Device.from(ref: $0) })
+        // TODO:
+
+        print("entities: \(entities.count)")
+        for e in entities {
+            if let name = e.property(kMIDIPropertyDisplayName) {
+                print("display: \(name)")
+            }
+            if let name = e.property(kMIDIPropertyName) {
+                print("name: \(name)")
+            }
+            if let uid = e.property(kMIDIPropertyUniqueID) {
+                print("uid: \(uid)")
+            }
+            if let id = e.property(kMIDIPropertyDeviceID) {
+                print("id: \(id)")
+            }
+        }
+        let d = Set(entities.map { Device.from(entity: $0) })
+        print("midi devices: \(d.count)")
+        return d
     }
     /*
     

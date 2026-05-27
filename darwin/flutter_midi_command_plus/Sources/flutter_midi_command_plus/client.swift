@@ -16,7 +16,7 @@ import os.log
 #endif
 
 class Client {
-    lazy var bluetooth: Bluetooth = Bluetooth(client:self)
+    lazy var bluetooth: Bluetooth = Bluetooth(client: self)
     var clientRef: MIDIClientRef = 0
     var midiRXChannel: FlutterEventChannel?
     var rxStreamHandler = StreamHandler()
@@ -27,16 +27,16 @@ class Client {
         // Network Session
         var session: MIDINetworkSession?
     #endif
-    
+
     var devices: Set<Device> {
         return Device.devices.union(bluetooth.devices)
     }
 
-    func getDevice<T:Device>(byId id: String) -> T? {
+    func getDevice<T: Device>(byId id: String) -> T? {
         let d = devices.first { $0.id == id }
         return d as? T
     }
-    
+
     init() {
     }
 
@@ -53,14 +53,14 @@ class Client {
 
         midiRXChannel = FlutterEventChannel(
             name:
-                "plugins.invisiblewrench.com/flutter_midi_command/rx_channel",
+                "plugins.aestesis.org/flutter_midi_command/rx_channel",
             binaryMessenger: messenger
         )
         midiRXChannel?.setStreamHandler(rxStreamHandler)
 
         midiSetupChannel = FlutterEventChannel(
             name:
-                "plugins.invisiblewrench.com/flutter_midi_command/setup_channel",
+                "plugins.aestesis.org/flutter_midi_command/setup_channel",
             binaryMessenger: messenger
         )
         midiSetupChannel?.setStreamHandler(setupStreamHandler)
@@ -68,7 +68,7 @@ class Client {
         bluetooth.setup(registrar: registrar)
 
         MIDIClientCreateWithBlock(
-            "plugins.invisiblewrench.com.FlutterMidiCommand" as CFString,
+            "plugins.aestesis.org.FlutterMidiCommand" as CFString,
             &clientRef
         ) { (notification) in
             self.handleMIDINotification(notification)
@@ -85,18 +85,25 @@ class Client {
             self.setupStreamHandler.send(data: data)
         }
     }
-
-    func connectDevice(deviceId:String) -> Bool {
-        // TODO:
-        return false;
+    func sendMidi(deviceId: String, port: Int, data: [UInt8], timestamp: Int?) {
+        let d = Data(bytes: data, count: Int(data.count))
+        DispatchQueue.main.async {
+            self.rxStreamHandler.send(data: [
+                "deviceId": deviceId, "data": data, "timestamp": timestamp,
+            ])
+        }
     }
 
-    func disconnectDevice(deviceId:String) -> Bool {
+    func connectDevice(deviceId: String) -> Bool {
         // TODO:
-        return false;
+        return false
     }
 
-    
+    func disconnectDevice(deviceId: String) -> Bool {
+        // TODO:
+        return false
+    }
+
     func handleMIDINotification(
         _ midiNotification: UnsafePointer<MIDINotification>
     ) {
@@ -272,7 +279,6 @@ class Client {
         }
     */
     // BLE
-
 
     #if os(iOS)
         /// MIDI Network Session
