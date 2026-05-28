@@ -15,7 +15,7 @@ extension Device {
         var device : MIDIDeviceRef = 0
         var status = MIDIEntityGetDevice(entity, &device)
         var maybeId = entity.integerProperty(kMIDIPropertyUniqueID)
-        var id = maybeId != nil ? "\(maybeId)": nil
+        var id = maybeId != nil ? String(UInt32(bitPattern: maybeId!), radix: 16) : nil
         if id == nil {
             let count = MIDIDeviceGetNumberOfEntities(device)
             var index = 0;
@@ -28,7 +28,7 @@ extension Device {
             }
             id = "\(device):\(index)"
         }
-        let type: DeviceType = entity.isNetwork() ? .network : .native
+        let type: DeviceType = entity.isNetwork() ? .network : entity == 0 ? .virtual : .native
         let name = entity.stringProperty(kMIDIPropertyName) ?? device.stringProperty(kMIDIPropertyDisplayName) ?? "No name"
         let inputs = entity.inputCount
         let outputs = entity.outputCount
@@ -43,18 +43,12 @@ extension Device {
             let destination = MIDIGetDestination(d)
             var entity: MIDIEntityRef = 0
             var status = MIDIEndpointGetEntity(destination, &entity)
-            if entity == nil {
-                continue
-            }
             entities.insert(entity)
         }
         for s in 0..<sourceCount {
             let source = MIDIGetSource(s)
             var entity: MIDIEntityRef = 0
             var status = MIDIEndpointGetEntity(source, &entity)
-            if entity == nil {
-                continue
-            }
             entities.insert(entity)
         }
         return entities
@@ -73,115 +67,6 @@ extension Device {
         }
         return nil
     }
-
-    /*
-    
-    
-    
-        // #######
-        // VIRTUAL
-        // #######
-    
-        var virtualDevices = [MIDIEntityRef: [String: Any]]()
-    
-        for d in 0..<destinationCount {
-            let destination = MIDIGetDestination(d)
-    
-            if !isVirtualEndpoint(endpoint: destination) {
-                continue
-            }
-    
-            if isOwnVirtualEndpoint(endpoint: destination) {
-                continue
-            }
-    
-            let displayName = FlutterMidiCommandPlusPlugin.getMIDIProperty(
-                kMIDIPropertyDisplayName,
-                fromObject: destination
-            )
-            let id = stringToId(str: displayName)  // Will cause conflicts when multiple virtual endpoints with the same name exist
-    
-            virtualDevices[id] = [
-                "name": displayName,
-                "id": "\(destination)",
-                "type": "virtual",
-                "connected":
-                    (connectedDevices.keys.contains(String(destination))
-                     ? "true" : "false"),
-                "outputs": createPortDict(count: 1),
-            ]
-        }
-    
-        for s in 0..<sourceCount {
-            let source = MIDIGetSource(s)
-    
-            if !isVirtualEndpoint(endpoint: source) {
-                continue
-            }
-    
-            if isOwnVirtualEndpoint(endpoint: source) {
-                continue
-            }
-    
-            let displayName = FlutterMidiCommandPlusPlugin.getMIDIProperty(
-                kMIDIPropertyDisplayName,
-                fromObject: source
-            )
-            let id = stringToId(str: displayName)  // Will cause conflicts when multiple virtual endpoints with the same name exist
-    
-            if var deviceDict = virtualDevices[id] {
-                deviceDict["inputs"] = createPortDict(count: 1)
-                let destination = deviceDict["id"] as? String ?? ""
-                let id2 = "\(destination):\(source)"
-                deviceDict["id"] = id2
-                deviceDict["connected"] =
-                (connectedDevices.keys.contains(id2) ? "true" : "false")
-                virtualDevices[id] = deviceDict
-    
-            } else {
-                //                print("create inputs dict")
-                let id2 = ":\(source)"
-                virtualDevices[id] = [
-                    "name": displayName,
-                    "id": id2,
-                    "type": "virtual",
-                    "connected":
-                        (connectedDevices.keys.contains(id2)
-                         ? "true" : "false"),
-                    "inputs": createPortDict(count: 1),
-                ]
-            }
-        }
-    
-        devices.append(contentsOf: virtualDevices.values)
-    
-        // ###########
-        // OWN VIRTUAL
-        // ###########
-    
-        var ownVirtualDevices = [MIDIEntityRef: [String: Any]]()
-    
-        for ownVirtualDevice in self.ownVirtualDevices {
-            let displayName = ownVirtualDevice.deviceName
-            let id = stringToId(str: displayName)
-    
-            ownVirtualDevices[id] = [
-                "name": displayName,
-                "id": "\(id)",
-                "type": "own-virtual",
-                "connected":
-                    (connectedDevices.keys.contains(String(id))
-                     ? "true" : "false"),
-                "outputs": createPortDict(count: 1),
-                "inputs": createPortDict(count: 1),
-            ]
-        }
-    
-        devices.append(contentsOf: ownVirtualDevices.values)
-    
-        return devices
-    }
-    */
 }
 ////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////

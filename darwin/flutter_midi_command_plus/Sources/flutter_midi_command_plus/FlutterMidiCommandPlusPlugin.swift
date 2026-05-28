@@ -105,7 +105,7 @@ public class FlutterMidiCommandPlusPlugin: NSObject, FlutterPlugin {
                     result(connected!)
                 }
             }
-            if(connected == nil) {
+            if connected == nil {
                 result(
                     FlutterError.init(
                         code: "MESSAGEERROR",
@@ -204,34 +204,19 @@ public class FlutterMidiCommandPlusPlugin: NSObject, FlutterPlugin {
             break
 
         case "addVirtualDevice":
-            /*
-            let name = extractName(arguments: call.arguments) ?? appName()
-            let ownVirtualDevice = findOrCreateOwnVirtualDevice(name: name)
-            let error =
-                ownVirtualDevice.errors.count > 0
-                ? ownVirtualDevice.errors.joined(separator: "\n") : nil
-            if error != nil {
-                removeOwnVirtualDevice(name: name)
+            var name: String = Bundle.main.infoDictionary?[kCFBundleNameKey as String] as! String
+            if let args = call.arguments as? [String: Any], let n = args["name"] as? String {
+                name = n
             }
-            
-            result(
-                error == nil
-                    ? error
-                    : FlutterError.init(
-                        code: "AUDIOERROR",
-                        message: error,
-                        details: call.arguments
-                    )
-            )
-             */
+            let device = client.addVirtualDevice(name: name)
+            result(device.toDictionary())
             break
 
         case "removeVirtualDevice":
-            /*
-            let name = extractName(arguments: call.arguments) ?? appName()
-            removeOwnVirtualDevice(name: name)
+            if let args = call.arguments as? [String: Any], let id = args["deviceId"] as? String {
+                client.removeVirtualDevice(deviceId: id)
+            }
             result(nil)
-             */
             break
 
         case "enableNetworkSession":

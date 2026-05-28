@@ -61,8 +61,9 @@ class MidiDeviceView extends StatelessWidget {
       crossAxisAlignment: .start,
       children: [
         Text('${device.name} - ${device.id}'),
+        Text(device.type),
         Text('inputs: ${device.inputs}'),
-        Text('outputs: ${device.outputs}')
+        Text('outputs: ${device.outputs}'),
       ],
     );
   }
