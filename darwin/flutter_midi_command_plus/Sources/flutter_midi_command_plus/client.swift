@@ -89,7 +89,7 @@ class Client {
             self.setupStreamHandler.send(data: data)
         }
     }
-    func sendMidi(deviceId: String, port: Int, data: [UInt8], timestamp: Int?) {
+    func sendMidi(deviceId: String, port: Int, data: [UInt32], timestamp: UInt64?) {
         let d = Data(bytes: data, count: Int(data.count))
         DispatchQueue.main.async {
             self.rxStreamHandler.send(data: [

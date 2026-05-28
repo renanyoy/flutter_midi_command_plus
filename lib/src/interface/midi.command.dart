@@ -36,9 +36,6 @@ class MidiCommand {
 
   static MidiCommandPlatform? __platform;
 
-  final StreamController<Uint8List> _txStreamCtrl =
-      StreamController.broadcast();
-
   final _bluetoothStateStream = StreamController<BluetoothState>.broadcast();
 
   var _bluetoothCentralIsStarted = false;
@@ -144,19 +141,18 @@ class MidiCommand {
   /// Sends data to the currently connected device
   ///
   /// Data is an UInt8List of individual MIDI command bytes
-  void sendData(
-    Uint8List data, {
-    String? deviceId,
-    int? portId,
+  void sendData({
+    required String deviceId,
+    required int port,
+    required Uint32List data,
     int? timestamp,
   }) {
     _platform.sendData(
-      data,
       deviceId: deviceId,
-      portId: portId,
+      port: port,
+      data: data,
       timestamp: timestamp,
     );
-    _txStreamCtrl.add(data);
   }
 
   /// Stream firing events whenever a midi package is received
@@ -171,13 +167,6 @@ class MidiCommand {
   /// For example, when a new BLE devices is discovered
   Stream<String>? get onMidiSetupChanged {
     return _platform.onMidiSetupChanged;
-  }
-
-  /// Stream firing events whenever a midi package is sent
-  ///
-  /// The event contains the raw bytes contained in the MIDI package
-  Stream<Uint8List> get onMidiDataSent {
-    return _txStreamCtrl.stream;
   }
 
   /// Creates a virtual MIDI source

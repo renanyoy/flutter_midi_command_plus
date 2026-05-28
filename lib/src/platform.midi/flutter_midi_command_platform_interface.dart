@@ -66,11 +66,11 @@ abstract class MidiCommandPlatform extends PlatformInterface {
     throw UnimplementedError('teardown() has not been implemented.');
   }
 
-  void sendData(
-    Uint8List data, {
+  void sendData({
+    required String deviceId,
+    required int port,
+    required Uint32List data,
     int? timestamp,
-    String? deviceId,
-    int? portId,
   }) {
     throw UnimplementedError('sendData() has not been implemented.');
   }

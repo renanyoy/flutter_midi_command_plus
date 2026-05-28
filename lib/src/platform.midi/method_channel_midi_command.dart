@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'flutter_midi_command_platform_interface.dart';
 import 'midi_device.dart';
@@ -80,7 +81,7 @@ class MethodChannelMidiCommand extends MidiCommandPlatform {
   }
 
   @override
-  Future<bool> deviceConnected(MidiDevice device) async  {
+  Future<bool> deviceConnected(MidiDevice device) async {
     return await _methodChannel.invokeMethod('deviceConnected', {
       "deviceId": device.id,
     });
@@ -104,17 +105,17 @@ class MethodChannelMidiCommand extends MidiCommandPlatform {
   }
 
   @override
-  void sendData(
-    Uint8List data, {
+  void sendData({
+    required String deviceId,
+    required int port,
+    required Uint32List data,
     int? timestamp,
-    String? deviceId,
-    int? portId,
   }) {
     _methodChannel.invokeMethod('sendData', {
+      "deviceId": deviceId,
+      "port": port,
       "data": data,
       "timestamp": timestamp,
-      "deviceId": deviceId,
-      "portId": portId,
     });
   }
 

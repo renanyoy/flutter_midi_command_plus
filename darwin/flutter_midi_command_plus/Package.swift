@@ -7,7 +7,7 @@ let package = Package(
     name: "flutter_midi_command_plus",
     platforms: [
         .iOS("13.0"),
-        .macOS("10.15"),
+        .macOS("11.5"),
     ],
     products: [
         .library(name: "flutter-midi-command-plus", targets: ["flutter_midi_command_plus"])
