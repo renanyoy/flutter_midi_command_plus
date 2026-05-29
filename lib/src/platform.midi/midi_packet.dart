@@ -6,7 +6,7 @@ import 'dart:typed_data';
 class MidiPacket {
   String deviceId;
   int port;
-  Uint8List data;
+  Uint32List data;
   int? timestamp;
   MidiPacket({
     required this.deviceId,

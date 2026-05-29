@@ -32,7 +32,6 @@ func stringToId(str: String) -> UInt32 {
 ////////////////////////////////////////////////////////////////////////////////////////////
 public class FlutterMidiCommandPlusPlugin: NSObject, FlutterPlugin {
     let client = Client()
-    //var ownVirtualDevices = Set<ConnectedOwnVirtualDevice>()
 
     public static func register(with registrar: FlutterPluginRegistrar) {
         #if os(macOS)

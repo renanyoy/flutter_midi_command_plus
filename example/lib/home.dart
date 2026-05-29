@@ -35,16 +35,47 @@ class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: .start,
-          children: [
-            ...BB.separator(
-              items: mm.devices.map((d) => MidiDeviceView(device: d)),
-              separatorBuilder: () => SizedBox(height: 10),
+      body: Column(
+        crossAxisAlignment: .start,
+        children: [
+          Container(
+            decoration: BoxDecoration(color: Colors.green),
+            child: Row(
+              children: [
+                TextButton(
+                  onPressed: () {
+                    mm.command.addVirtualDevice();
+                  },
+                  child: Text('+Virtual'),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              child: SizedBox(
+                width: double.infinity,
+                child: Column(
+                  crossAxisAlignment: .start,
+                  children: [
+                    SizedBox(height: 20),
+                    ...BB.separator(
+                      items: mm.devices.map(
+                        (d) => MidiDeviceView(
+                          device: d,
+                          onRemove: () {
+                            mm.command.removeVirtualDevice(deviceId: d.id);
+                          },
+                        ),
+                      ),
+                      separatorBuilder: () => SizedBox(height: 10),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -54,16 +85,25 @@ class _HomeState extends State<Home> {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 class MidiDeviceView extends StatelessWidget {
   final MidiDevice device;
-  const MidiDeviceView({super.key, required this.device});
+  final VoidCallback? onRemove;
+  const MidiDeviceView({super.key, required this.device, this.onRemove});
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: .start,
+    return Row(
       children: [
-        Text('${device.name} - ${device.id}'),
-        Text(device.type),
-        Text('inputs: ${device.inputs}'),
-        Text('outputs: ${device.outputs}'),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: .start,
+            children: [
+              Text('${device.name} - ${device.id}'),
+              Text('${device.type}'),
+              Text('inputs: ${device.inputs}'),
+              Text('outputs: ${device.outputs}'),
+            ],
+          ),
+        ),
+        if (device.type == .virtual)
+          IconButton(onPressed: onRemove, icon: Icon(Icons.delete)),
       ],
     );
   }

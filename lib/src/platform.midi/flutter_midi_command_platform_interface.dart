@@ -50,7 +50,7 @@ abstract class MidiCommandPlatform extends PlatformInterface {
     );
   }
 
-  Future<bool> deviceConnected(MidiDevice device) {
+  Future<bool> isDeviceConnected(MidiDevice device) {
     throw UnimplementedError('deviceConnected() has not been implemented.');
   }
 
@@ -87,11 +87,11 @@ abstract class MidiCommandPlatform extends PlatformInterface {
     );
   }
 
-  void addVirtualDevice({String? name}) {
+  Future<MidiDevice> addVirtualDevice({String? name}) {
     throw UnimplementedError('addVirtualDevice() has not been implemented.');
   }
 
-  void removeVirtualDevice({String? name}) {
+  Future<void> removeVirtualDevice({String? deviceId}) {
     throw UnimplementedError('removeVirtualDevice() has not been implemented.');
   }
 

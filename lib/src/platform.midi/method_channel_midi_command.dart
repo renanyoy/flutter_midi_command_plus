@@ -81,7 +81,7 @@ class MethodChannelMidiCommand extends MidiCommandPlatform {
   }
 
   @override
-  Future<bool> deviceConnected(MidiDevice device) async {
+  Future<bool> isDeviceConnected(MidiDevice device) async {
     return await _methodChannel.invokeMethod('deviceConnected', {
       "deviceId": device.id,
     });
@@ -96,7 +96,7 @@ class MethodChannelMidiCommand extends MidiCommandPlatform {
 
   @override
   void disconnectDevice(MidiDevice device) {
-    _methodChannel.invokeMethod('disconnectDevice', device.id);
+    _methodChannel.invokeMethod('disconnectDevice', {"deviceId": device.id});
   }
 
   @override
@@ -135,13 +135,17 @@ class MethodChannelMidiCommand extends MidiCommandPlatform {
   }
 
   @override
-  void addVirtualDevice({String? name}) {
-    _methodChannel.invokeMethod('addVirtualDevice', {"name": name});
+  Future<MidiDevice> addVirtualDevice({String? name}) async {
+    return await _methodChannel.invokeMethod('addVirtualDevice', {
+      "name": name,
+    });
   }
 
   @override
-  void removeVirtualDevice({String? name}) {
-    _methodChannel.invokeMethod('removeVirtualDevice', {"name": name});
+  Future<void> removeVirtualDevice({String? deviceId}) async {
+    await _methodChannel.invokeMethod('removeVirtualDevice', {
+      "deviceId": deviceId,
+    });
   }
 
   @override

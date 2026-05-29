@@ -120,11 +120,11 @@ class MidiCommand {
   }
 
   Future<bool> deviceConnected(MidiDevice device) async {
-    return _platform.deviceConnected(device);
+    return _platform.isDeviceConnected(device);
   }
 
   /// Connects to the device
-  Future<void> connectToDevice(MidiDevice device) async {
+  Future<void> connectDevice(MidiDevice device) async {
     return _platform.connectToDevice(device);
   }
 
@@ -174,14 +174,14 @@ class MidiCommand {
   /// The virtual MIDI source appears as a virtual port in other apps.
   /// Other apps can receive MIDI from this source.
   /// Currently only supported on iOS.
-  void addVirtualDevice({String? name}) {
-    _platform.addVirtualDevice(name: name);
+  Future<MidiDevice> addVirtualDevice({String? name})  {
+    return _platform.addVirtualDevice(name: name);
   }
 
   /// Removes a previously created virtual MIDI source.
   /// Currently only supported on iOS.
-  void removeVirtualDevice({String? name}) {
-    _platform.removeVirtualDevice(name: name);
+  Future<void> removeVirtualDevice({String? deviceId}) async {
+    await _platform.removeVirtualDevice(deviceId: deviceId);
   }
 
   /// Returns the current state of the network session

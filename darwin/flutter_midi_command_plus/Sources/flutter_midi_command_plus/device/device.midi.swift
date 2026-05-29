@@ -43,13 +43,17 @@ extension Device {
             let destination = MIDIGetDestination(d)
             var entity: MIDIEntityRef = 0
             var status = MIDIEndpointGetEntity(destination, &entity)
-            entities.insert(entity)
+            if entity != 0 {
+                entities.insert(entity)
+            }
         }
         for s in 0..<sourceCount {
             let source = MIDIGetSource(s)
             var entity: MIDIEntityRef = 0
             var status = MIDIEndpointGetEntity(source, &entity)
-            entities.insert(entity)
+            if entity != 0 {
+                entities.insert(entity)
+            }
         }
         return entities
     }

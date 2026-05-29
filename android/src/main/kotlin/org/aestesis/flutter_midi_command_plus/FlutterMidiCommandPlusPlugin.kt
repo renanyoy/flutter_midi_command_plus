@@ -6,6 +6,9 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 
+
+// midi doc https://developer.android.com/reference/android/media/midi/package-summary
+
 /** FlutterMidiCommandPlusPlugin */
 class FlutterMidiCommandPlusPlugin :
     FlutterPlugin,

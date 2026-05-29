@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 class MidiDevice {
-  String type;
+  MidiDeviceType type;
   String id;
   String name;
   int inputs;
@@ -20,17 +20,38 @@ class MidiDevice {
   Map<String, dynamic> toMap() => <String, dynamic>{
     'name': name,
     'id': id,
-    'type': type,
+    'type': type.toJson(),
     'inputs': inputs,
     'outputs': outputs,
   };
   factory MidiDevice.fromMap(Map<String, dynamic> map) => MidiDevice(
     name: map['name'] as String,
     id: map['id'] as String,
-    type: map['type'] as String,
+    type: MidiDeviceType.fromJson(map['type']),
     inputs: map['inputs'] as int,
     outputs: map['outputs'] as int,
   );
 }
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+enum MidiDeviceType {
+  native,
+  virtual,
+  ble,
+  network;
+
+  String toJson() => name;
+  static MidiDeviceType fromJson(String json) =>
+      MidiDeviceType.values.byName(json);
+
+  @override
+  String toString() => switch (this) {
+    MidiDeviceType.native => 'Native',
+    MidiDeviceType.virtual => 'Virtual',
+    MidiDeviceType.ble => 'BLE',
+    MidiDeviceType.network => 'Network',
+  };
+}
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////

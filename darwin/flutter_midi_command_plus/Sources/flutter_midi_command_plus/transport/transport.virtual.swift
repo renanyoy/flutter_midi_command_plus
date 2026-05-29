@@ -16,8 +16,8 @@ class VirtualTransport: Transport {
     }
 
     override func open() {
-        let sourceId = Int32("\(device.name).source".hash & 0xFFFF)
-        let destinationId = Int32("\(device.name).destination".hash & 0xFFFF)
+        let sourceId = Int32(bitPattern: idFrom(name: "\(device.name).source"))
+        let destinationId = Int32(bitPattern: idFrom(name: "\(device.name).destination"))
         // source
         MIDISourceCreate(client.clientRef, device.name as CFString, &sourceEndPoint)
         MIDIObjectSetIntegerProperty(sourceEndPoint, kMIDIPropertyUniqueID, sourceId)

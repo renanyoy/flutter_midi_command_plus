@@ -133,8 +133,8 @@ class Client {
             n += 1
             nm = "\(name) #\(n)"
         }
-        let id = String(UInt64(bitPattern: nm.hash), radix: 16)
-        let device = Device(id: id, type: .ownVirtual, name: nm, inputs: 1, outputs: 1)
+        let id = hexIdFrom(name:nm)
+        let device = Device(id: id, type: .virtual, name: nm, inputs: 1, outputs: 1)
         vdevices.insert(device)
         let transport = Transport.from(client: self, device: device)
         transport.open()
@@ -152,7 +152,6 @@ class Client {
         }
     }
 
-    #if os(iOS)
         /// MIDI Network Session
         @objc func midiNetworkChanged(notification: NSNotification) {
             print("\(#function)")
@@ -190,6 +189,5 @@ class Client {
             }
             sendState("\(#function) \(notification)")
         }
-    #endif
 
 }

@@ -8,20 +8,21 @@ import 'package:flutter_midi_command_plus/flutter_midi_command_plus.dart';
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 class MidiManager {
   MidiManager();
-  final onMidiData = Event<MidiPacket>();
   final onBluetoothStateChanged = Event<BluetoothState>();
   final onSetupChanged = Event<String>();
   final onDevicesChanged = Event<List<MidiDevice>>();
-  late final MidiCommand mc;
+  final onMidiData = Event<MidiPacket>();
+  final onMidiMessage =Event<MidiMessage>();
+  late final MidiCommand command;
   StreamSubscription? stateSub;
   StreamSubscription? setupSub;
   final List<MidiDevice> devices = [];
 
   Future<void> initialize({bool useBluetooth = true}) async {
-    mc = MidiCommand();
+    command = MidiCommand();
     if (useBluetooth) {
-      await mc.startBluetoothCentral();
-      stateSub = mc.onBluetoothStateChanged.listen((state) async {
+      await command.startBluetoothCentral();
+      stateSub = command.onBluetoothStateChanged.listen((state) async {
         Debug.info('state: $state');
         switch (state) {
           case BluetoothState.poweredOn:
@@ -34,59 +35,52 @@ class MidiManager {
             break;
         }
         onBluetoothStateChanged.fire(state);
-        await updateDevices();
       });
     }
-    setupSub = mc.onMidiSetupChanged?.listen((setup) async {
+    setupSub = command.onMidiSetupChanged?.listen((setup) async {
       Debug.info('setup: $setup');
       onSetupChanged.fire(setup);
-      await updateDevices();
+      if (setup == 'setupChanged') {
+        await updateDevices();
+      }
     });
-    mc.onMidiDataReceived?.listen((packet) {
+    command.onMidiDataReceived?.listen((packet) {
       onMidiData.fire(packet);
-      // TODO:      CCMessage
+      // TODO: CCMessage.from(packet);
     });
     updateDevices();
   }
 
   void dispose() {
     for (final device in devices) {
-      mc.disconnectDevice(device);
+      command.disconnectDevice(device);
     }
     stateSub?.cancel();
     setupSub?.cancel();
   }
 
   Future<void> updateDevices() async {
-    final odevices = {...devices};
-    final devscan = {...(await mc.devices ?? [])};
-    // add added
-    for (final device in devscan) {
-      if (!devices.contains(device)) {
-        try {
-          await mc.connectToDevice(device);
-        } catch (error) {
-          Debug.info(error);
-        }
-        Debug.info('connected device ${device.name}');
-        Debug.info('added device ${device.name}');
-        devices.add(device);
+    final odevices = {...this.devices};
+    final devices = {...(await command.devices ?? [])};
+    for (final d in devices) {
+      if (!await command.deviceConnected(d)) {
+        await command.connectDevice(d);
       }
     }
-    // remove removed
-    devices.removeWhere((device) => !devscan.contains(device));
-    devices.sortBy((d) => d.name);
     if (!DeepCollectionEquality().equals(odevices, {...devices})) {
-      onDevicesChanged.fire(devices);
+      this.devices.clear();
+      this.devices.addAll(devices);
+      this.devices.sortBy((d) => d.name);
+      onDevicesChanged.fire(this.devices);
     }
   }
 
   Future<void> startBluetouthScanning() async {
-    await mc.startScanningForBluetoothDevices();
+    await command.startScanningForBluetoothDevices();
   }
 
   void stopBluetouthScanning() {
-    mc.stopScanningForBluetoothDevices();
+    command.stopScanningForBluetoothDevices();
   }
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
