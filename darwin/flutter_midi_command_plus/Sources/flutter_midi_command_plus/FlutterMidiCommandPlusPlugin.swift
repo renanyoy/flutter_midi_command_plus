@@ -175,16 +175,15 @@ public class FlutterMidiCommandPlusPlugin: NSObject, FlutterPlugin {
             break
 
         case "sendData":
-            // TODO:
-            /*
             if let packet = call.arguments as? [String: Any],
-                let deviceId = packet["deviceId"] as? String, let port = packet["port"] as? UInt64
+                let deviceId = packet["deviceId"] as? String, let port = packet["port"] as? Int, let data = packet["data"] as? FlutterStandardTypedData
             {
-                sendData(
-                    packet["data"] as! FlutterStandardTypedData,
+                let words:[UInt32] = data.data.toArray(type: UInt32.self)
+                client.transmitMidi(
                     deviceId: deviceId,
                     port: port,
-                    timestamp: packet["timestamp"] as? UInt64
+                    data: words,
+                    timestamp: packet["timestamp"] as? UInt64 ?? UInt64(0)
                 )
                 result(nil)
             } else {
@@ -196,7 +195,6 @@ public class FlutterMidiCommandPlusPlugin: NSObject, FlutterPlugin {
                     )
                 )
             }
-             */
             break
         case "teardown":
             // TODO: disconnect all
@@ -220,18 +218,11 @@ public class FlutterMidiCommandPlusPlugin: NSObject, FlutterPlugin {
 
         case "enableNetworkSession":
             if let enabled = call.arguments as? Bool {
-                #if os(iOS)
-                    session?.isEnabled = enabled
-                #endif
+                session?.isEnabled = enabled
             }
-
         case "isNetworkSessionEnabled":
-            #if os(iOS)
-                result(session?.isEnabled ?? false)
-            #else
-                result(nil)
-            #endif
-
+            result(session?.isEnabled ?? false)
+            break
         default:
             result(FlutterMethodNotImplemented)
         }

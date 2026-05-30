@@ -15,6 +15,8 @@ import os.log
     import FlutterMacOS
 #endif
 
+// network session https://aud1os.wordpress.com/2018/03/23/the-macos-midi-network-session-guide/
+
 class Client {
     lazy var bluetooth: Bluetooth = Bluetooth(client: self)
     var clientRef: MIDIClientRef = 0
@@ -23,10 +25,7 @@ class Client {
     var midiSetupChannel: FlutterEventChannel?
     var setupStreamHandler = StreamHandler()
 
-    #if os(iOS)
-        // Network Session
-        var session: MIDINetworkSession?
-    #endif
+    var session: MIDINetworkSession?
 
     var vdevices: Set<Device> = []
     var devices: Set<Device> {
@@ -79,10 +78,8 @@ class Client {
             self.handleMIDINotification(notification)
         }
 
-        #if os(iOS)
-            session = MIDINetworkSession.default()
-            session?.connectionPolicy = MIDINetworkConnectionPolicy.anyone
-        #endif
+        session = MIDINetworkSession.default()
+        session?.connectionPolicy = MIDINetworkConnectionPolicy.anyone
     }
 
     func sendState(_ data: Any) {
@@ -96,6 +93,11 @@ class Client {
             self.rxStreamHandler.send(data: [
                 "deviceId": deviceId, "data": data, "timestamp": timestamp,
             ])
+        }
+    }
+    func transmitMidi(deviceId: String, port: Int, data: [UInt32], timestamp: UInt64 = 0) {
+        if let transport = transports[deviceId] {
+            transport.send(port: port, data: data, timestamp: timestamp)
         }
     }
 
@@ -133,7 +135,7 @@ class Client {
             n += 1
             nm = "\(name) #\(n)"
         }
-        let id = hexIdFrom(name:nm)
+        let id = hexIdFrom(name: nm)
         let device = Device(id: id, type: .virtual, name: nm, inputs: 1, outputs: 1)
         vdevices.insert(device)
         let transport = Transport.from(client: self, device: device)
@@ -152,42 +154,42 @@ class Client {
         }
     }
 
-        /// MIDI Network Session
-        @objc func midiNetworkChanged(notification: NSNotification) {
-            print("\(#function)")
-            print("\(notification)")
-            if let session = notification.object as? MIDINetworkSession {
-                print("session \(session)")
-                for con in session.connections() {
-                    print("con \(con)")
-                }
-                print("isEnabled \(session.isEnabled)")
-                print("sourceEndpoint \(session.sourceEndpoint())")
-                print("destinationEndpoint \(session.destinationEndpoint())")
-                print("networkName \(session.networkName)")
-                print("localName \(session.localName)")
-
-                //            if let name = getDeviceName(session.sourceEndpoint()) {
-                //                print("source name \(name)")
-                //            }
-                //
-                //            if let name = getDeviceName(session.destinationEndpoint()) {
-                //                print("destination name \(name)")
-                //            }
+    /// MIDI Network Session
+    @objc func midiNetworkChanged(notification: NSNotification) {
+        print("\(#function)")
+        print("\(notification)")
+        if let session = notification.object as? MIDINetworkSession {
+            print("session \(session)")
+            for con in session.connections() {
+                print("con \(con)")
             }
-            sendState("\(#function) \(notification)")
-        }
+            print("isEnabled \(session.isEnabled)")
+            print("sourceEndpoint \(session.sourceEndpoint())")
+            print("destinationEndpoint \(session.destinationEndpoint())")
+            print("networkName \(session.networkName)")
+            print("localName \(session.localName)")
 
-        @objc func midiNetworkContactsChanged(notification: NSNotification) {
-            print("\(#function)")
-            print("\(notification)")
-            if let session = notification.object as? MIDINetworkSession {
-                print("session \(session)")
-                for con in session.contacts() {
-                    print("contact \(con)")
-                }
-            }
-            sendState("\(#function) \(notification)")
+            //            if let name = getDeviceName(session.sourceEndpoint()) {
+            //                print("source name \(name)")
+            //            }
+            //
+            //            if let name = getDeviceName(session.destinationEndpoint()) {
+            //                print("destination name \(name)")
+            //            }
         }
+        sendState("\(#function) \(notification)")
+    }
+
+    @objc func midiNetworkContactsChanged(notification: NSNotification) {
+        print("\(#function)")
+        print("\(notification)")
+        if let session = notification.object as? MIDINetworkSession {
+            print("session \(session)")
+            for con in session.contacts() {
+                print("contact \(con)")
+            }
+        }
+        sendState("\(#function) \(notification)")
+    }
 
 }

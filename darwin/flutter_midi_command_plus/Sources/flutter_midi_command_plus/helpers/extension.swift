@@ -83,3 +83,11 @@ extension MIDIObjectType {
         }
     }
 }
+
+extension Data {
+    func toArray<T>(type: T.Type) -> [T] where T: ExpressibleByIntegerLiteral {
+        Array(unsafeUninitializedCapacity: self.count/MemoryLayout<T>.stride) { (buffer, i) in
+            i = copyBytes(to: buffer) / MemoryLayout<T>.stride
+        }
+    }
+}
