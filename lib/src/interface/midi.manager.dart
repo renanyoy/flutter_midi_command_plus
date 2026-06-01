@@ -1,7 +1,9 @@
+// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:async';
 
 import 'package:bb_dart/bb_dart.dart';
 import 'package:collection/collection.dart';
+
 import 'package:flutter_midi_command_plus/flutter_midi_command_plus.dart';
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -12,7 +14,7 @@ class MidiManager {
   final onSetupChanged = Event<String>();
   final onDevicesChanged = Event<List<MidiDevice>>();
   final onMidiData = Event<MidiPacket>();
-  final onMidiMessage =Event<MidiMessage>();
+  final Map<MidiPort, Event<MidiMessage>> onMidiMessage = {};
   late final MidiCommand command;
   StreamSubscription? stateSub;
   StreamSubscription? setupSub;
@@ -46,9 +48,20 @@ class MidiManager {
     });
     command.onMidiDataReceived?.listen((packet) {
       onMidiData.fire(packet);
-      // TODO: CCMessage.from(packet);
+      if (onMidiMessage.containsKey(packet)) {
+        final message = MidiMessage.from(data: packet.data);
+        onMidiMessage[packet]!.fire(message);
+      }
     });
     updateDevices();
+  }
+
+  Event<MidiMessage> events({required String deviceId, required int port}) {
+    final key = MidiPort(deviceId: deviceId, port: port);
+    if (!onMidiMessage.containsKey(key)) {
+      onMidiMessage[key] = Event<MidiMessage>();
+    }  
+    return onMidiMessage[key]!;
   }
 
   void dispose() {
@@ -83,5 +96,6 @@ class MidiManager {
     command.stopScanningForBluetoothDevices();
   }
 }
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////

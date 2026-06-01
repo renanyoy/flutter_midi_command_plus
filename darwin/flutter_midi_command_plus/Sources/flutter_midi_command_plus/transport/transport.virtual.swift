@@ -23,7 +23,7 @@ class VirtualTransport: Transport {
         MIDIObjectSetIntegerProperty(sourceEndPoint, kMIDIPropertyUniqueID, sourceId)
         // destination
         MIDIDestinationCreateWithProtocol(
-            client.clientRef, device.name as CFString, ._2_0, &destinationEndPoint,
+            client.clientRef, device.name as CFString, ._1_0, &destinationEndPoint,
             { list, ref in
                 let num = list.pointee.numPackets
                 for packet in list.unsafeSequence() {

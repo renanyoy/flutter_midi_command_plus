@@ -1,16 +1,16 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:typed_data';
 
+import 'package:flutter_midi_command_plus/flutter_midi_command_plus.dart';
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-class MidiPacket {
-  String deviceId;
-  int port;
-  Uint32List data;
+class MidiPacket extends MidiPort {
+  Uint8List data;
   int? timestamp;
   MidiPacket({
-    required this.deviceId,
-    required this.port,
+    required super.deviceId,
+    required super.port,
     required this.data,
     this.timestamp,
   });

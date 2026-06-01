@@ -11,11 +11,11 @@ class MidiTransport: Transport {
     }
     override func open() {
         MIDIInputPortCreateWithProtocol(
-            client.clientRef, "midi_command_\(device.id)_input_port" as CFString, ._2_0, &inputPort
+            client.clientRef, "midi_command_\(device.id)_input_port" as CFString, ._1_0, &inputPort
         ) { list, ref in
             let port = Int(bitPattern: ref)
             let num = list.pointee.numPackets
-            for packet in list.unsafeSequence() {
+            for packet: UnsafePointer<MIDIEventPacket> in list.unsafeSequence() {
                 let timestamp: UInt64 = packet.pointee.timeStamp
                 let count = Int(packet.pointee.wordCount)
                 let w = packet.pointee.words
@@ -29,7 +29,8 @@ class MidiTransport: Transport {
                     w.60, w.61, w.62, w.63,
                 ]
                 self.client.sendMidi(
-                    deviceId: self.device.id, port: port, data: Array(words[..<count]), timestamp: timestamp)
+                    deviceId: self.device.id, port: port, data: Array(words[..<count]),
+                    timestamp: timestamp)
             }
         }
         for i in 0..<device.inputs {

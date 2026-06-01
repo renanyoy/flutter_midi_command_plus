@@ -218,10 +218,10 @@ public class FlutterMidiCommandPlusPlugin: NSObject, FlutterPlugin {
 
         case "enableNetworkSession":
             if let enabled = call.arguments as? Bool {
-                session?.isEnabled = enabled
+                client.session?.isEnabled = enabled
             }
         case "isNetworkSessionEnabled":
-            result(session?.isEnabled ?? false)
+            result(client.session?.isEnabled ?? false)
             break
         default:
             result(FlutterMethodNotImplemented)

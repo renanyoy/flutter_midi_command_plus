@@ -1,471 +1,648 @@
 import 'dart:typed_data';
 
-/*
-enum MessageType {
-  cc,
-  pc,
-  noteOn,
-  noteOff,
-  nrpn,
-  rpn,
-  sysex,
-  beat,
-  polyAt,
-  at,
-  pitchBend,
-}
-*/
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
 class MidiMessage {
-  Uint8List get data => Uint8List(0);
-  MidiMessage();
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-class CCMessage extends MidiMessage {
-  int channel;
-  int controller;
-  int value;
-  CCMessage({this.channel = 0, this.controller = 0, this.value = 0});
-  @override
-  Uint8List get data {
-    final data = Uint8List(3);
-    data[0] = 0xB0 + channel;
-    data[1] = controller;
-    data[2] = value;
-    return data;
-  }
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-class PCMessage extends MidiMessage {
-  int channel;
-  int program;
-  PCMessage({this.channel = 0, this.program = 0});
-  @override
-  Uint8List get data {
-    final data = Uint8List(2);
-    data[0] = 0xC0 + channel;
-    data[1] = program;
-    return data;
-  }
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-class NoteOnMessage extends MidiMessage {
-  int channel;
-  int note;
-  int velocity;
-  NoteOnMessage({this.channel = 0, this.note = 0, this.velocity = 0});
-  @override
-  Uint8List get data {
-    final data = Uint8List(3);
-    data[0] = 0x90 + channel;
-    data[1] = note;
-    data[2] = velocity;
-    return data;
-  }
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-class NoteOffMessage extends MidiMessage {
-  int channel;
-  int note;
-  int velocity;
-  NoteOffMessage({this.channel = 0, this.note = 0, this.velocity = 0});
-  @override
-  Uint8List get data {
-    final data = Uint8List(3);
-    data[0] = 0x80 + channel;
-    data[1] = note;
-    data[2] = velocity;
-    return data;
-  }
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-class SysExMessage extends MidiMessage {
-  List<int> headerData;
-  int value;
-  SysExMessage({this.headerData = const [], this.value = 0});
-  @override
-  Uint8List get data {
-    final data = Uint8List.fromList(headerData);
-    data.insert(0, 0xF0); // Start byte
-    data.addAll(_bytesForValue(value));
-    data.add(0xF7); // End byte
-    return data;
-  }
-
-  Int8List _bytesForValue(int value) {
-    var bytes = Int8List(5);
-    int absValue = value.abs();
-    int base256 = (absValue ~/ 256);
-    int left = absValue - (base256 * 256);
-    int base1 = left % 128;
-    left -= base1;
-    int base2 = left ~/ 2;
-    if (value < 0) {
-      bytes[0] = 0x7F;
-      bytes[1] = 0x7F;
-      bytes[2] = 0x7F - base256;
-      bytes[3] = 0x7F - base2;
-      bytes[4] = 0x7F - base1;
-    } else {
-      bytes[2] = base256;
-      bytes[3] = base2;
-      bytes[4] = base1;
-    }
-    return bytes;
-  }
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-class NRPN4Message extends MidiMessage {
-  int channel;
-  int parameter;
-  int value;
-  NRPN4Message({this.channel = 0, this.parameter = 0, this.value = 0});
-  @override
-  Uint8List get data {
-    parameter = parameter.clamp(0, 16383);
-    int parameterMSB = parameter ~/ 128;
-    int parameterLSB = parameter & 0x7F;
-
-    value = value.clamp(0, 16383);
-    int valueMSB = value ~/ 128;
-    int valueLSB = value & 0x7F;
-
-    final data = Uint8List(9);
-    // Data Entry MSB
-    data[0] = 0xB0 + channel;
-    data[1] = 0x63;
-    data[2] = parameterMSB;
-
-    // Data Entry LSB
-    data[3] = 0x62;
-    data[4] = parameterLSB;
-
-    // Data Value MSB
-    data[5] = 0x06;
-    data[6] = valueMSB;
-
-    // Data Value LSB
-    data[7] = 0x26;
-    data[8] = valueLSB;
-
-    return data;
-  }
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-class NRPN3Message extends MidiMessage {
-  int channel;
-  int parameter;
-  int value;
-  NRPN3Message({this.channel = 0, this.parameter = 0, this.value = 0});
-  @override
-  Uint8List get data {
-    parameter = parameter.clamp(0, 16383);
-    int parameterMSB = parameter ~/ 128;
-    int parameterLSB = parameter & 0x7F;
-
-    value = value & 0x7F;
-
-    final data = Uint8List(7);
-    // Data Entry MSB
-    data[0] = 0xB0 + channel;
-    data[1] = 0x63;
-    data[2] = parameterMSB;
-
-    // Data Entry LSB
-    data[3] = 0x62;
-    data[4] = parameterLSB;
-
-    // Data Value
-    data[5] = 0x06;
-    data[6] = value;
-
-    return data;
-  }
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-class NRPNHexMessage extends MidiMessage {
-  int channel;
-  int parameterMSB;
-  int parameterLSB;
-  int valueMSB;
-  int valueLSB;
-  NRPNHexMessage({
-    this.channel = 0,
-    this.parameterMSB = 0,
-    this.parameterLSB = 0,
-    this.valueMSB = 0,
-    this.valueLSB = -1,
-  });
-  @override
-  Uint8List get data {
-    final data = Uint8List(9);
-    // Data Entry MSB
-    data[0] = 0xB0 + channel;
-    data[1] = 0x63;
-    data[2] = parameterMSB;
-
-    // Data Entry LSB
-    data[3] = 0x62;
-    data[4] = parameterLSB;
-
-    // Data Value MSB
-    data[5] = 0x06;
-    data[6] = valueMSB;
-
-    // Data Value LSB
-    data[7] = 0x26;
-    data[8] = valueLSB;
-
-    return data;
-  }
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-class NRPNNullMessage extends MidiMessage {
-  int channel;
-  NRPNNullMessage({this.channel = 0});
-  @override
-  Uint8List get data {
-    final data = Uint8List(6);
-    // Data Entry MSB
-    data[0] = 0xB0 + channel;
-    data[1] = 0x63;
-    data[2] = 0x7F;
-
-    // Data Entry LSB
-    data[3] = 0xB0 + channel;
-    data[4] = 0x62;
-    data[5] = 0x7F;
-
-    return data;
-  }
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-class RPNMessage extends MidiMessage {
-  int channel;
-  int parameter;
-  int value;
-
-  /// ## RPN Message
-  /// All defined RPN Parameters as per Midi Spec:
-  /// - 0x0000 – Pitch bend range
-  /// - 0x0001 – Fine tuning
-  /// - 0x0002 – Coarse tuning
-  /// - 0x0003 – Tuning program change
-  /// - 0x0004 – Tuning bank select
-  /// - 0x0005 – Modulation depth range
-  /// - 0x0006 – MPE Configuration Message (MCM)
-  ///
-  /// Value Range is Hex: 0x0000 - 0x3FFFF or Decimal: 0-16383
-  RPNMessage({this.channel = 0, this.parameter = 0, this.value = 0});
-  @override
-  Uint8List get data {
-    final data = Uint8List(12);
-    // Data Entry MSB
-    data[0] = 0xB0 + channel;
-    data[1] = 0x65;
-    data[2] = parameter >> 7;
-
-    // Data Entry LSB
-    data[3] = 0xB0 + channel;
-    data[4] = 0x64;
-    data[5] = parameter & 0x7F;
-
-    // Data Value MSB
-    data[6] = 0xB0 + channel;
-    data[7] = 0x06;
-    data[8] = value >> 7;
-
-    // Data Value LSB
-    data[9] = 0xB0 + channel;
-    data[10] = 0x26;
-    data[11] = value & 0x7F;
-
-    return data;
-  }
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-class RPNHexMessage extends MidiMessage {
-  int channel;
-  int parameterMSB;
-  int parameterLSB;
-  int valueMSB;
-  int valueLSB;
-  RPNHexMessage({
-    this.channel = 0,
-    this.parameterMSB = 0,
-    this.parameterLSB = 0,
-    this.valueMSB = 0,
-    this.valueLSB = -1,
-  });
-
-  @override
-  Uint8List get data {
-    var length = valueLSB > -1 ? 12 : 9;
-    final data = Uint8List(length);
-    // Data Entry MSB
-    data[0] = 0xB0 + channel;
-    data[1] = 0x65;
-    data[2] = parameterMSB;
-
-    // Data Entry LSB
-    data[3] = 0xB0 + channel;
-    data[4] = 0x64;
-    data[5] = parameterLSB;
-
-    // Data Value MSB
-    data[6] = 0xB0 + channel;
-    data[7] = 0x06;
-    data[8] = valueMSB;
-
-    // Data Value LSB
-    if (valueLSB > -1) {
-      data[9] = 0xB0 + channel;
-      data[10] = 0x26;
-      data[11] = valueLSB;
-    }
-
-    return data;
-  }
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-class RPNNullMessage extends MidiMessage {
-  int channel;
-
-  /// It is best practice, but not mandatory, to send a Null Message at the end of a RPN
-  /// Stream to prevent accidental value changes on CC6 after a message has concluded.
-  RPNNullMessage({this.channel = 0});
-
-  @override
-  Uint8List get data {
-    final data = Uint8List(6);
-    // Data Entry MSB
-    data[0] = 0xB0 + channel;
-    data[1] = 0x65;
-    data[2] = 0x7F;
-
-    // Data Entry LSB
-    data[3] = 0xB0 + channel;
-    data[4] = 0x64;
-    data[5] = 0x7F;
-
-    return data;
-  }
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-class PitchBendMessage extends MidiMessage {
-  int channel;
-  double bend;
-
-  /// Create Pitch Bend Message with a bend value range of -1.0 to 1.0 (default: 0.0).
-  PitchBendMessage({this.channel = 0, this.bend = 0});
-
-  @override
-  Uint8List get data {
-    double clampedBend = (bend.clamp(-1, 1) + 1) / 2.0;
-    int targetValue = (clampedBend * 0x3FFF).round();
-
-    int bendMSB = targetValue >> 7;
-    int bendLSB = targetValue & 0x7F;
-
-    final data = Uint8List(3);
-    data[0] = 0xE0 + channel;
-    data[1] = bendLSB;
-    data[2] = bendMSB;
-    return data;
-  }
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-class PolyATMessage extends MidiMessage {
-  int channel;
-  int note;
-  int pressure;
-
-  /// Create a Polyphonic Aftertouch Message for a single note
-  PolyATMessage({this.channel = 0, this.note = 0, this.pressure = 0});
-
-  @override
-  Uint8List get data {
-    final data = Uint8List(3);
-    data[0] = 0xA0 + channel;
-    data[1] = note;
-    data[2] = pressure;
-    return data;
-  }
-}
-
-class ATMessage extends MidiMessage {
-  int channel;
-  int pressure;
-
-  /// Create an Aftertouch Message for a single channel
-  ATMessage({this.channel = 0, this.pressure = 0});
-
-  @override
-  Uint8List get data {
-    final data = Uint8List(2);
-    data[0] = 0xD0 + channel;
-    data[1] = pressure;
-    return data;
-  }
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-class SenseMessage extends MidiMessage {
-  /// Sense Message
-
-  @override
-  Uint8List get data {
-    final data = Uint8List(1);
-    data[0] = 0xFE;
-    return data;
-  }
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-enum ClockType { beat, start, cont, stop }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-class ClockMessage extends MidiMessage {
-  ClockType type;
-
-  /// Clock Message
-  ClockMessage({this.type = ClockType.beat});
-
-  @override
-  Uint8List get data {
-    final data = Uint8List(1);
+  final MidiMessageType type;
+  const MidiMessage({required this.type});
+  factory MidiMessage.from({required Uint8List data}) {
+    final type = MidiMessageType.from(data[0]);
     switch (type) {
-      case ClockType.beat:
-        data[0] = 0xF8;
-        break;
-      case ClockType.start:
-        data[0] = 0xFA;
-        break;
-      case ClockType.cont:
-        data[0] = 0xFB;
-        break;
-      case ClockType.stop:
-        data[0] = 0xFC;
-        break;
+      case MidiMessageType.noteOff:
+        return MidiMessageNoteOff.from(data: data);
+      case MidiMessageType.noteOn:
+        return MidiMessageNoteOn.from(data: data);
+      case MidiMessageType.afterTouch:
+        return MidiMessageAftertouch.from(data: data);
+      case MidiMessageType.controlChange:
+        return MidiMessageControlChange.from(data: data);
+      case MidiMessageType.programChange:
+        return MidiMessageProgramChange.from(data: data);
+      case MidiMessageType.channelPressure:
+        return MidiMessageChannelPressure.from(data: data);
+      case MidiMessageType.pitchBend:
+        return MidiMessagePitch.from(data: data);
+      case MidiMessageType.sysExStart:
+        return MidiMessageSysEx.from(data: data);
+      case MidiMessageType.mtcQuaterFrame:
+        return MidiMessageMtcQuaterFrame.from(data: data);
+      case MidiMessageType.songPosition:
+        return MidiMessageSongPosition.from(data: data);
+      case MidiMessageType.songSelect:
+        return MidiMessageSongSelect.from(data: data);
+      case MidiMessageType.tuningRequested:
+        return MidiMessageTuneRequested.from(data: data);
+      case MidiMessageType.clock:
+        return MidiMessageClock.from(data: data);
+      case MidiMessageType.tick:
+        return MidiMessageTick.from(data: data);
+      case MidiMessageType.start:
+        return MidiMessageStart.from(data: data);
+      case MidiMessageType.midiContinue:
+        return MidiMessageContinue.from(data: data);
+      case MidiMessageType.stop:
+        return MidiMessageStop.from(data: data);
+      case MidiMessageType.activeSense:
+        return MidiMessageActiveSense.from(data: data);
+      case MidiMessageType.reset:
+        return MidiMessageReset.from(data: data);
+      default:
+        throw Exception('Invalid MidiMessageType: $type');
     }
-    return data;
+  }
+  Uint8List get data => Uint8List.fromList([type.value]);
+  @override
+  String toString() => 'MidiMessage(type: $type)';
+  String get description => 'Message: $type';
+  String get key => '$type';
+
+  static String keyFrom(
+      {required MidiMessageType type,
+      required int channel,
+      required int number}) {
+    return '$type.$channel.$number';
   }
 }
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
+class MidiIOChannelMessage extends MidiMessage {
+  final int channel;
+  const MidiIOChannelMessage({required super.type, required this.channel});
+  @override
+  Uint8List get data => Uint8List.fromList([type.value | channel]);
+  @override
+  String toString() => 'MidiIOChannelMessage(type: $type, channel: $channel)';
+  String get channelName =>
+      channel < 9 ? 'Channel  ${channel + 1}' : 'Channel ${channel + 1}';
+  @override
+  String get description => '$channelName: $type';
+  @override
+  String get key => '$type.$channel';
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+class MidiMessageNote extends MidiIOChannelMessage {
+  final int note;
+  final int velocity;
+  const MidiMessageNote(
+      {required super.channel,
+      required this.note,
+      required this.velocity,
+      required super.type});
+  @override
+  Uint8List get data =>
+      Uint8List.fromList([type.value | channel, note, velocity]);
+  @override
+  String toString() =>
+      'MidiMessageNoteOn(channel: $channel, note: $note, velocity: $velocity)';
+  @override
+  String get description =>
+      '$channelName: Note On/Off ${midiNoteName(note)} $velocity';
+  @override
+  String get key => '$type.$channel.$note';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MidiMessageNote &&
+          type == other.type &&
+          channel == other.channel &&
+          note == other.note &&
+          velocity == other.velocity;
+  @override
+  int get hashCode =>
+      type.hashCode ^ channel.hashCode ^ note.hashCode ^ velocity.hashCode;
+}
+
+class MidiMessageNoteOn extends MidiMessageNote {
+  const MidiMessageNoteOn({
+    required super.channel,
+    required super.note,
+    required super.velocity,
+    super.type = MidiMessageType.noteOn,
+  });
+  factory MidiMessageNoteOn.from({required Uint8List data}) {
+    final note = data[1];
+    final velocity = data[2];
+    return MidiMessageNoteOn(
+        channel: data[0] & 0xf, note: note, velocity: velocity);
+  }
+  @override
+  String toString() =>
+      'MidiMessageNoteOn(channel: $channel, note: $note, velocity: $velocity)';
+  @override
+  String get description =>
+      '$channelName: Note On ${midiNoteName(note)} $velocity';
+}
+
+class MidiMessageNoteOff extends MidiMessageNote {
+  const MidiMessageNoteOff({
+    required super.channel,
+    required super.note,
+    required super.velocity,
+    super.type = MidiMessageType.noteOff,
+  });
+  factory MidiMessageNoteOff.from({required Uint8List data}) {
+    final note = data[1];
+    final velocity = data[2];
+    return MidiMessageNoteOff(
+        channel: data[0] & 0xf, note: note, velocity: velocity);
+  }
+  @override
+  String toString() =>
+      'MidiMessageNoteOff(channel: $channel, note: $note, velocity: $velocity)';
+  @override
+  String get description =>
+      '$channelName: Note Off ${midiNoteName(note)} $velocity';
+}
+
+class MidiMessageAftertouch extends MidiIOChannelMessage {
+  final int note;
+  final int pressure;
+  const MidiMessageAftertouch({
+    required super.channel,
+    required this.note,
+    required this.pressure,
+    super.type = MidiMessageType.afterTouch,
+  });
+  factory MidiMessageAftertouch.from({required Uint8List data}) {
+    final note = data[1];
+    final pressure = data[2];
+    return MidiMessageAftertouch(
+        channel: data[0] & 0xf, note: note, pressure: pressure);
+  }
+  @override
+  Uint8List get data =>
+      Uint8List.fromList([type.value | channel, note, pressure]);
+  @override
+  String toString() =>
+      'MidiMessageAftertouch(channel: $channel, note: $note, pressure: $pressure)';
+  @override
+  String get description =>
+      '$channelName: Note On/Off ${midiNoteName(note)} $pressure';
+
+  @override
+  String get key => '$type.$channel.$note';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MidiMessageAftertouch &&
+          type == other.type &&
+          channel == other.channel &&
+          note == other.note &&
+          pressure == other.pressure;
+  @override
+  int get hashCode =>
+      type.hashCode ^ channel.hashCode ^ note.hashCode ^ pressure.hashCode;
+}
+
+class MidiMessageControlChange extends MidiIOChannelMessage {
+  final int control;
+  final int value;
+  const MidiMessageControlChange({
+    required super.channel,
+    required this.control,
+    required this.value,
+    super.type = MidiMessageType.controlChange,
+  });
+  factory MidiMessageControlChange.from({required Uint8List data}) {
+    final control = data[1];
+    final value = data[2];
+    return MidiMessageControlChange(
+        channel: data[0] & 0xf, control: control, value: value);
+  }
+  @override
+  Uint8List get data =>
+      Uint8List.fromList([type.value | channel, control, value]);
+  @override
+  String toString() =>
+      'MidiMessageControlChange(channel: $channel, control: $control, value: $value)';
+  @override
+  String get description => '$channelName: Control Change $control $value';
+  @override
+  String get key => '$type.$channel.$control';
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MidiMessageControlChange &&
+          type == other.type &&
+          channel == other.channel &&
+          control == other.control &&
+          value == other.value;
+  @override
+  int get hashCode =>
+      type.hashCode ^ channel.hashCode ^ control.hashCode ^ value.hashCode;
+}
+
+class MidiMessageProgramChange extends MidiIOChannelMessage {
+  final int program;
+  const MidiMessageProgramChange({
+    required super.channel,
+    required this.program,
+    super.type = MidiMessageType.programChange,
+  });
+  factory MidiMessageProgramChange.from({required Uint8List data}) {
+    final program = data[1];
+    return MidiMessageProgramChange(channel: data[0] & 0xf, program: program);
+  }
+  @override
+  Uint8List get data => Uint8List.fromList([type.value | channel, program]);
+  @override
+  String toString() =>
+      'MidiMessageProgramChange(channel: $channel, program: $program)';
+  @override
+  String get description => '$channelName: Program Change $program';
+  @override
+  String get key => '$type.$channel';
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MidiMessageProgramChange &&
+          type == other.type &&
+          channel == other.channel &&
+          program == other.program;
+  @override
+  int get hashCode => type.hashCode ^ channel.hashCode ^ program.hashCode;
+}
+
+class MidiMessageChannelPressure extends MidiIOChannelMessage {
+  final int pressure;
+  const MidiMessageChannelPressure({
+    required super.channel,
+    required this.pressure,
+    super.type = MidiMessageType.channelPressure,
+  });
+  factory MidiMessageChannelPressure.from({required Uint8List data}) {
+    final pressure = data[1];
+    return MidiMessageChannelPressure(
+        channel: data[0] & 0xf, pressure: pressure);
+  }
+  @override
+  Uint8List get data => Uint8List.fromList([type.value | channel, pressure]);
+  @override
+  String toString() =>
+      'MidiMessageChannelPressure(channel: $channel, pressure: $pressure)';
+  @override
+  String get description => '$channelName: Channel Pressure $pressure';
+  @override
+  String get key => '$type.$channel';
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MidiMessageChannelPressure &&
+          type == other.type &&
+          channel == other.channel &&
+          pressure == other.pressure;
+  @override
+  int get hashCode => type.hashCode ^ channel.hashCode ^ pressure.hashCode;
+}
+
+class MidiMessagePitch extends MidiIOChannelMessage {
+  final int pitch;
+  const MidiMessagePitch({
+    required super.channel,
+    required this.pitch,
+    super.type = MidiMessageType.pitchBend,
+  });
+  factory MidiMessagePitch.from({required Uint8List data}) {
+    final pitch = data[1];
+    return MidiMessagePitch(channel: data[0] & 0xf, pitch: pitch);
+  }
+  @override
+  Uint8List get data => Uint8List.fromList([type.value | channel, pitch]);
+  @override
+  String toString() => 'MidiMessagePitch(channel: $channel, pitch: $pitch)';
+  @override
+  String get description => '$channelName: Pitch Bend $pitch';
+  @override
+  String get key => '$type.$channel';
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MidiMessagePitch &&
+          type == other.type &&
+          channel == other.channel &&
+          pitch == other.pitch;
+  @override
+  int get hashCode => type.hashCode ^ channel.hashCode ^ pitch.hashCode;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
+class MidiIOSystemMessage extends MidiMessage {
+  const MidiIOSystemMessage({required super.type});
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+class MidiMessageSysEx extends MidiIOSystemMessage {
+  final Uint8List sysex;
+  const MidiMessageSysEx({
+    required super.type,
+    required this.sysex,
+  });
+  factory MidiMessageSysEx.from({required Uint8List data}) {
+    return MidiMessageSysEx(
+        type: MidiMessageType.sysExStart,
+        sysex: data.sublist(1, data.length - 1));
+  }
+  @override
+  Uint8List get data => Uint8List.fromList([
+        MidiMessageType.sysExStart.value,
+        ...sysex,
+        MidiMessageType.sysExEnd.value
+      ]);
+  @override
+  String toString() => 'MidiMessageSysEx(data: $data)';
+  @override
+  String get description => 'SysEx: $data';
+}
+
+class MidiMessageMtcQuaterFrame extends MidiIOSystemMessage {
+  final int value;
+  const MidiMessageMtcQuaterFrame({
+    required this.value,
+    super.type = MidiMessageType.mtcQuaterFrame,
+  });
+  factory MidiMessageMtcQuaterFrame.from({required Uint8List data}) {
+    final value = data[1];
+    return MidiMessageMtcQuaterFrame(value: value);
+  }
+  @override
+  Uint8List get data => Uint8List.fromList([type.value, value]);
+  @override
+  String toString() => 'MidiMessageMtcQuaterFrame(value: $value)';
+  @override
+  String get description => 'MtcQuaterFrame: $value';
+}
+
+class MidiMessageSongPosition extends MidiIOSystemMessage {
+  final int position;
+  const MidiMessageSongPosition({
+    required this.position,
+    super.type = MidiMessageType.songPosition,
+  });
+  factory MidiMessageSongPosition.from({required Uint8List data}) {
+    final position = data[1] | (data[2] << 7);
+    return MidiMessageSongPosition(position: position);
+  }
+  @override
+  Uint8List get data =>
+      Uint8List.fromList([type.value, position & 0x7f, (position >> 7) & 0x7f]);
+  @override
+  String toString() => 'MidiMessageSongPosition(position: $position)';
+  @override
+  String get description => 'SongPosition: $position';
+}
+
+class MidiMessageSongSelect extends MidiIOSystemMessage {
+  final int song;
+  const MidiMessageSongSelect({
+    required this.song,
+    super.type = MidiMessageType.songSelect,
+  });
+  factory MidiMessageSongSelect.from({required Uint8List data}) {
+    final song = data[1];
+    return MidiMessageSongSelect(song: song);
+  }
+  @override
+  Uint8List get data => Uint8List.fromList([type.value, song]);
+  @override
+  String toString() => 'MidiMessageSongSelect(song: $song)';
+  @override
+  String get description => 'SongSelect: $song';
+}
+
+class MidiMessageTuneRequested extends MidiIOSystemMessage {
+  const MidiMessageTuneRequested({
+    super.type = MidiMessageType.tuningRequested,
+  });
+  factory MidiMessageTuneRequested.from({required Uint8List data}) {
+    return const MidiMessageTuneRequested();
+  }
+  @override
+  Uint8List get data => Uint8List.fromList([type.value]);
+  @override
+  String toString() => 'MidiMessageTuneRequested()';
+  @override
+  String get description => 'TuneRequested';
+}
+
+class MidiMessageClock extends MidiIOSystemMessage {
+  const MidiMessageClock({
+    super.type = MidiMessageType.clock,
+  });
+  factory MidiMessageClock.from({required Uint8List data}) {
+    return const MidiMessageClock();
+  }
+  @override
+  Uint8List get data => Uint8List.fromList([type.value]);
+  @override
+  String toString() => 'MidiMessageClock()';
+  @override
+  String get description => 'Clock';
+}
+
+class MidiMessageTick extends MidiIOSystemMessage {
+  const MidiMessageTick({
+    super.type = MidiMessageType.tick,
+  });
+  factory MidiMessageTick.from({required Uint8List data}) {
+    return const MidiMessageTick();
+  }
+  @override
+  Uint8List get data => Uint8List.fromList([type.value]);
+  @override
+  String toString() => 'MidiMessageTick()';
+  @override
+  String get description => 'Tick';
+}
+
+class MidiMessageStart extends MidiIOSystemMessage {
+  const MidiMessageStart({
+    super.type = MidiMessageType.start,
+  });
+  factory MidiMessageStart.from({required Uint8List data}) {
+    return const MidiMessageStart();
+  }
+  @override
+  Uint8List get data => Uint8List.fromList([type.value]);
+  @override
+  String toString() => 'MidiMessageStart()';
+  @override
+  String get description => 'Start';
+}
+
+class MidiMessageContinue extends MidiIOSystemMessage {
+  const MidiMessageContinue({
+    super.type = MidiMessageType.midiContinue,
+  });
+  factory MidiMessageContinue.from({required Uint8List data}) {
+    return const MidiMessageContinue();
+  }
+  @override
+  Uint8List get data => Uint8List.fromList([type.value]);
+  @override
+  String toString() => 'MidiMessageContinue()';
+  @override
+  String get description => 'Continue';
+}
+
+class MidiMessageStop extends MidiIOSystemMessage {
+  const MidiMessageStop({
+    super.type = MidiMessageType.stop,
+  });
+  factory MidiMessageStop.from({required Uint8List data}) {
+    return const MidiMessageStop();
+  }
+  @override
+  Uint8List get data => Uint8List.fromList([type.value]);
+  @override
+  String toString() => 'MidiMessageStop()';
+  @override
+  String get description => 'Stop';
+}
+
+class MidiMessageActiveSense extends MidiIOSystemMessage {
+  const MidiMessageActiveSense({
+    super.type = MidiMessageType.activeSense,
+  });
+  factory MidiMessageActiveSense.from({required Uint8List data}) {
+    return const MidiMessageActiveSense();
+  }
+  @override
+  Uint8List get data => Uint8List.fromList([type.value]);
+  @override
+  String toString() => 'MidiMessageActiveSense()';
+  @override
+  String get description => 'ActiveSense';
+}
+
+class MidiMessageReset extends MidiIOSystemMessage {
+  const MidiMessageReset({
+    super.type = MidiMessageType.reset,
+  });
+  factory MidiMessageReset.from({required Uint8List data}) {
+    return const MidiMessageReset();
+  }
+  @override
+  Uint8List get data => Uint8List.fromList([type.value]);
+  @override
+  String toString() => 'MidiMessageReset()';
+  @override
+  String get description => 'Reset';
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// https://medium.com/@keybaudio/understanding-midi-messages-a1d1dba0296e
+enum MidiMessageType {
+  // channel messages
+  noteOff(0x80),
+  noteOn(0x90),
+  afterTouch(0xa0),
+  controlChange(0xb0),
+  programChange(0xc0),
+  channelPressure(0xd0),
+  pitchBend(0xe0),
+  system(0xf0),
+  // system messages
+  sysExStart(0xF0), // Start of SysEx stream
+  sysExEnd(0xF7), // End of SysEx stream
+  mtcQuaterFrame(0xF1), // MTC quarter frame time code
+  songPosition(0xF2), // Ask slave to position playback cue
+  songSelect(0xF3), // Select a certain song and cue to beginning
+  tuningRequested(0xF6), // Being asked to self-tune
+  clock(0xF8), // sync with a tempo (24 clocks per quarter note)
+  tick(0xF9), // Being kept in sync with a tick (every 10ms)
+  start(0xFA), // Master asking for playback from the beginning
+  midiContinue(0xFB), // Master asked that we continue playback from cue
+  stop(0xFC), // Master asked to stop playback and retain cue point
+  activeSense(0xFE), // Keepalive data to let us know things are still connected
+  reset(0xFF); // Reset to default, no keys pressed, cue to beginning
+
+  final int value;
+  const MidiMessageType(this.value);
+
+  static MidiMessageType from(int value) {
+    switch (value & 0xf0) {
+      case 0x80:
+        return MidiMessageType.noteOff;
+      case 0x90:
+        return MidiMessageType.noteOn;
+      case 0xa0:
+        return MidiMessageType.afterTouch;
+      case 0xb0:
+        return MidiMessageType.controlChange;
+      case 0xc0:
+        return MidiMessageType.programChange;
+      case 0xd0:
+        return MidiMessageType.channelPressure;
+      case 0xe0:
+        return MidiMessageType.pitchBend;
+      case 0xf0:
+        return fromSysEx(value);
+      default:
+        throw Exception('Invalid MidiMessageType value: $value');
+    }
+  }
+
+  static MidiMessageType fromSysEx(int value) {
+    switch (value) {
+      case 0xF0:
+        return MidiMessageType.sysExStart;
+      case 0xF7:
+        return MidiMessageType.sysExEnd;
+      case 0xF1:
+        return MidiMessageType.mtcQuaterFrame;
+      case 0xF2:
+        return MidiMessageType.songPosition;
+      case 0xF3:
+        return MidiMessageType.songSelect;
+      case 0xF6:
+        return MidiMessageType.tuningRequested;
+      case 0xF8:
+        return MidiMessageType.clock;
+      case 0xF9:
+        return MidiMessageType.tick;
+      case 0xFA:
+        return MidiMessageType.start;
+      case 0xFB:
+        return MidiMessageType.midiContinue;
+      case 0xFC:
+        return MidiMessageType.stop;
+      case 0xFE:
+        return MidiMessageType.activeSense;
+      case 0xFF:
+        return MidiMessageType.reset;
+      default:
+        throw Exception('Invalid MidiMessageType value: $value');
+    }
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
+String midiNoteName(int note) {
+  const noteNames = [
+    'C',
+    'C#',
+    'D',
+    'D#',
+    'E',
+    'F',
+    'F#',
+    'G',
+    'G#',
+    'A',
+    'A#',
+    'B'
+  ];
+  final octave = (note / 12).floor() - 1;
+  final noteName = noteNames[note % 12];
+  return '$noteName$octave';
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
