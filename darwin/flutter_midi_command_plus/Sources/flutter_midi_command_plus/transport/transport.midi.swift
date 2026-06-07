@@ -28,6 +28,7 @@ class MidiTransport: Transport {
                     w.50, w.51, w.52, w.53, w.54, w.55, w.56, w.57, w.58, w.59,
                     w.60, w.61, w.62, w.63,
                 ]
+                // example: https://furnacecreek.org/blog/2024-04-06-modern-coremidi-event-handling-with-swift
                 self.client.sendMidi(
                     deviceId: self.device.id, port: port, data: Array(words[..<count]),
                     timestamp: timestamp)

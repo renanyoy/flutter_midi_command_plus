@@ -91,12 +91,18 @@ class Client {
         let d = Data(bytes: data, count: Int(data.count))
         DispatchQueue.main.async {
             self.rxStreamHandler.send(data: [
-                "deviceId": deviceId, "data": data, "timestamp": timestamp,
+                "deviceId": deviceId, "port": port, "data": data, "timestamp": timestamp,
             ])
         }
     }
     func transmitMidi(deviceId: String, port: Int, data: [UInt32], timestamp: UInt64 = 0) {
         if let transport = transports[deviceId] {
+            var bytes = [UInt8]()
+            for u in data {
+                withUnsafeBytes(of: u.bigEndian) {
+                    bytes.append(contentsOf: $0)
+                }
+            }
             transport.send(port: port, data: data, timestamp: timestamp)
         }
     }

@@ -122,8 +122,12 @@ class MethodChannelMidiCommand extends MidiCommandPlatform {
   @override
   Stream<MidiPacket>? get onMidiDataReceived {
     // print("get on midi data");
-    _rxStream ??= _rxChannel.receiveBroadcastStream().map<MidiPacket>((map) {
-      return MidiPacket.fromMap(map);
+    _rxStream ??= _rxChannel.receiveBroadcastStream().map<MidiPacket>((m) {
+      print('$m');
+      if (m is! Map) throw Exception('wrong format');
+      final mp = Map<String,dynamic>.from(m);
+      //final mp = m.map((k, v) => MapEntry<String,dynamic>(k, v));
+      return MidiPacket.fromMap(mp);
     });
     return _rxStream;
   }

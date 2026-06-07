@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_midi_command_plus/flutter_midi_command_plus.dart';
 import 'package:bb.flutter/bb.dart';
 
+import 'device.dart';
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 class Home extends StatefulWidget {
@@ -15,11 +17,12 @@ class Home extends StatefulWidget {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 class _HomeState extends State<Home> {
   late final MidiManager mm = MidiManager();
-  late final StreamSubscription devicesSub;
+  late final StreamSubscription changedSub;
+  final Map<MidiPort, List<MidiMessage>> messages = {};
   @override
   void initState() {
     super.initState();
-    devicesSub = mm.onDevicesChanged.listen((d) {
+    changedSub = mm.onDevicesChanged.listen((d) {
       if (mounted) setState(() {});
     });
     mm.initialize(useBluetooth: false);
@@ -27,7 +30,7 @@ class _HomeState extends State<Home> {
 
   @override
   void dispose() {
-    devicesSub.cancel();
+    changedSub.cancel();
     mm.dispose();
     super.dispose();
   }
@@ -62,6 +65,8 @@ class _HomeState extends State<Home> {
                     ...BB.separator(
                       items: mm.devices.map(
                         (d) => MidiDeviceView(
+                          key: Key(d.id),
+                          manager: mm,
                           device: d,
                           onRemove: () {
                             mm.command.removeVirtualDevice(deviceId: d.id);
@@ -81,32 +86,5 @@ class _HomeState extends State<Home> {
   }
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-class MidiDeviceView extends StatelessWidget {
-  final MidiDevice device;
-  final VoidCallback? onRemove;
-  const MidiDeviceView({super.key, required this.device, this.onRemove});
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: .start,
-            children: [
-              Text('${device.name} - ${device.id}'),
-              Text('${device.type}'),
-              Text('inputs: ${device.inputs}'),
-              Text('outputs: ${device.outputs}'),
-            ],
-          ),
-        ),
-        if (device.type == .virtual)
-          IconButton(onPressed: onRemove, icon: Icon(Icons.delete)),
-      ],
-    );
-  }
-}
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
